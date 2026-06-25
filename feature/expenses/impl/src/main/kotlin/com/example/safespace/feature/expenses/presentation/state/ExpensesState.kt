@@ -8,5 +8,8 @@ data class ExpensesState(
     val inputAmount: String = "",
     val inputDescription: String = "",
     val selectedCategory: ExpenseCategory = ExpenseCategory.OTHER,
-    val isAddSheetOpened: Boolean = false
+    val isAddSheetOpened: Boolean = false,
+
+    val currentFilter: ExpenseCategory? = null,
+    val totalSum: Double = 0.0
 )

@@ -10,4 +10,5 @@ sealed interface ExpensesUiEvent {
     data class OnDeleteExpenseClicked(val id: String) : ExpensesUiEvent
 
     data class OnToggleAddSheet(val isOpen: Boolean): ExpensesUiEvent
+    data class OnFilterChanged(val category: ExpenseCategory?): ExpensesUiEvent
 }

@@ -2,6 +2,7 @@ package com.example.safespace.feature.expenses.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.safespace.feature.expenses.domain.model.ExpensesItem
 import com.example.safespace.feature.expenses.domain.repository.ExpensesRepository
 import com.example.safespace.feature.expenses.presentation.action.ExpensesUiEvent
 import com.example.safespace.feature.expenses.presentation.state.ExpensesState
@@ -17,11 +18,13 @@ class ExpensesViewModel(
     private val _state = MutableStateFlow(ExpensesState())
     val state: StateFlow<ExpensesState> = _state.asStateFlow()
 
+    private var allExpenses: List<ExpensesItem> = emptyList()
+
     init {
         viewModelScope.launch {
             repository.getAllExpenses().collect { expensesList ->
-                _state.update { it.copy(expenses = expensesList) }
-
+                allExpenses = expensesList
+                applyFilters()
             }
         }
     }
@@ -34,6 +37,10 @@ class ExpensesViewModel(
             is ExpensesUiEvent.OnAddExpenseClicked -> addExpense()
             is ExpensesUiEvent.OnDeleteExpenseClicked -> deleteExpense(event.id)
             is ExpensesUiEvent.OnToggleAddSheet -> _state.update { it.copy(isAddSheetOpened = event.isOpen) }
+            is ExpensesUiEvent.OnFilterChanged -> {
+                _state.update { it.copy(currentFilter = event.category) }
+                applyFilters()
+            }
         }
     }
 
@@ -51,6 +58,25 @@ class ExpensesViewModel(
     private fun deleteExpense(id: String) {
         viewModelScope.launch {
             repository.deleteExpense(id)
+        }
+    }
+
+    private fun applyFilters() {
+        val currentFilter = _state.value.currentFilter
+
+        val filteredList = if (currentFilter == null) {
+            allExpenses
+        } else {
+            allExpenses.filter { it.category == currentFilter.displayName }
+        }
+
+        val total = filteredList.sumOf { it.amount }
+
+        _state.update {
+            it.copy(
+                expenses = filteredList,
+                totalSum = total
+            )
         }
     }
 }

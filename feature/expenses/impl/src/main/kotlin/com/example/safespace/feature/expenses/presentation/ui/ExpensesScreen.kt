@@ -44,9 +44,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.safespace.core.ui.components.ExpenseCategory
+import com.example.safespace.core.ui.theme.SafeSpaceTypography
 import com.example.safespace.feature.expenses.domain.model.ExpensesItem
 import com.example.safespace.feature.expenses.presentation.action.ExpensesUiEvent
 import com.example.safespace.feature.expenses.presentation.state.ExpensesState
+import com.example.safespace.feature.expenses.presentation.ui.components.CategoryFilterDropdown
 import com.example.safespace.feature.expenses.presentation.ui.components.CategorySelector
 import com.example.safespace.feature.expenses.presentation.viewmodel.ExpensesViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -92,13 +94,35 @@ fun ExpensesContent(
         ) {
             Text(
                 text = "SafeSpace",
-                style = MaterialTheme.typography.headlineMedium,
+                style = SafeSpaceTypography.headlineMedium,
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text(text = "История", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ){
+                Text(
+                    text = "История",
+                    style = SafeSpaceTypography.titleMedium
+                )
+                CategoryFilterDropdown(
+                    selectedFilter = state.currentFilter,
+                    onFilterSelected = { onEvent.invoke(ExpensesUiEvent.OnFilterChanged(it))}
+                )
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Итого за период: ${state.totalSum}",
+                style = SafeSpaceTypography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             if (state.expenses.isEmpty()) {
                 Box(
@@ -107,7 +131,7 @@ fun ExpensesContent(
                 ) {
                     Text(
                         text = "Пока нет расходов. Нажмите + чтобы добавить первую запись",
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = SafeSpaceTypography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -149,19 +173,19 @@ fun ExpensesContent(
                                 Column(modifier = Modifier.weight(1f)){
                                     Text(
                                         text = expense.description,
-                                        style = MaterialTheme.typography.titleMedium
+                                        style = SafeSpaceTypography.titleMedium
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = expense.category,
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = SafeSpaceTypography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
 
                                 Text (
                                     text = "${expense.amount}",
-                                    style = MaterialTheme.typography.titleLarge,
+                                    style = SafeSpaceTypography.titleLarge,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -202,7 +226,7 @@ fun AddExpenseModalBottomSheet(
         ) {
             Text(
                 text = "Новый расход",
-                style = MaterialTheme.typography.titleLarge
+                style = SafeSpaceTypography.titleLarge
             )
             Spacer(modifier = Modifier.height(16.dp))
 
