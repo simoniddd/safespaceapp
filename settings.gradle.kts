@@ -31,6 +31,7 @@ include(":app")
 // Core
 include(":core:di")
 include(":core:data")
+include(":core:ui")
 
 // Feature: Expenses
 include(":feature:expenses:api")

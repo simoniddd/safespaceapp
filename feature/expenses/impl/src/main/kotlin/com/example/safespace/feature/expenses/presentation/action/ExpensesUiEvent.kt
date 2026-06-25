@@ -1,9 +1,11 @@
 package com.example.safespace.feature.expenses.presentation.action
 
+import com.example.safespace.core.ui.components.ExpenseCategory
+
 sealed interface ExpensesUiEvent {
     data class OnAmountChanged(val amount: String) : ExpensesUiEvent
     data class OnDescriptionChanged(val description: String) : ExpensesUiEvent
-    data class OnCategorySelected(val category: String) : ExpensesUiEvent
+    data class OnCategorySelected(val category: ExpenseCategory) : ExpensesUiEvent
     data object OnAddExpenseClicked : ExpensesUiEvent
     data class OnDeleteExpenseClicked(val id: String) : ExpensesUiEvent
 

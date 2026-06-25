@@ -1,5 +1,6 @@
 package com.example.safespace.feature.expenses.presentation.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,8 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -35,12 +39,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.safespace.core.ui.components.ExpenseCategory
 import com.example.safespace.feature.expenses.domain.model.ExpensesItem
 import com.example.safespace.feature.expenses.presentation.action.ExpensesUiEvent
 import com.example.safespace.feature.expenses.presentation.state.ExpensesState
+import com.example.safespace.feature.expenses.presentation.ui.components.CategorySelector
 import com.example.safespace.feature.expenses.presentation.viewmodel.ExpensesViewModel
 import org.koin.androidx.compose.koinViewModel
 
@@ -117,14 +124,29 @@ fun ExpensesContent(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
                             )
                         ) {
+                            val categoryEnum = ExpenseCategory.fromName(expense.category)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = categoryEnum.icon,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+
+                                Column(modifier = Modifier.weight(1f)){
                                     Text(
                                         text = expense.description,
                                         style = MaterialTheme.typography.titleMedium
@@ -136,8 +158,9 @@ fun ExpensesContent(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                Text(
-                                    text = "$${expense.amount}",
+
+                                Text (
+                                    text = "${expense.amount}",
                                     style = MaterialTheme.typography.titleLarge,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -165,7 +188,8 @@ fun AddExpenseModalBottomSheet(
     onEvent: (ExpensesUiEvent) -> Unit
 ) {
     ModalBottomSheet(
-        onDismissRequest = { onEvent.invoke(ExpensesUiEvent.OnToggleAddSheet(false)) }
+        onDismissRequest = { onEvent.invoke(ExpensesUiEvent.OnToggleAddSheet(false)) },
+        sheetState = sheetState
     ) {
         Column(
             modifier = Modifier
@@ -197,6 +221,13 @@ fun AddExpenseModalBottomSheet(
                 label = { Text("На что потратил?") },
                 modifier = Modifier.fillMaxWidth()
             )
+            Spacer(modifier = Modifier.height(24.dp))
+
+            CategorySelector(
+                selectedCategory = state.selectedCategory,
+                onCategorySelected = {onEvent.invoke(ExpensesUiEvent.OnCategorySelected(it))}
+            )
+
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(

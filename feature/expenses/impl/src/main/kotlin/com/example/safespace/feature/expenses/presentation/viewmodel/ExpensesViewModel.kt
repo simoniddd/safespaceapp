@@ -40,7 +40,7 @@ class ExpensesViewModel(
     private fun addExpense() {
         val amount = _state.value.inputAmount.toDoubleOrNull() ?: return
         val description = _state.value.inputDescription.ifBlank { "Без описания" }
-        val category = _state.value.selectedCategory
+        val category = _state.value.selectedCategory.displayName
 
         _state.update { it.copy(inputAmount = "", inputDescription = "") }
         viewModelScope.launch {
