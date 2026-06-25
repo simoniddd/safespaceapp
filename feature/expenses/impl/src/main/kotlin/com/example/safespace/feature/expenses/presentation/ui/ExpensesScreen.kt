@@ -44,6 +44,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.safespace.core.ui.components.ExpenseCategory
+import com.example.safespace.core.ui.theme.AppColors
 import com.example.safespace.core.ui.theme.SafeSpaceTypography
 import com.example.safespace.feature.expenses.domain.model.ExpensesItem
 import com.example.safespace.feature.expenses.presentation.action.ExpensesUiEvent
@@ -75,7 +76,7 @@ fun ExpensesContent(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { onEvent(ExpensesUiEvent.OnToggleAddSheet(true)) },
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+                containerColor = AppColors.PrimaryContainer
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -95,7 +96,7 @@ fun ExpensesContent(
             Text(
                 text = "SafeSpace",
                 style = SafeSpaceTypography.headlineMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = AppColors.Primary
             )
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -119,7 +120,7 @@ fun ExpensesContent(
             Text(
                 text = "Итого за период: ${state.totalSum}",
                 style = SafeSpaceTypography.titleLarge,
-                color = MaterialTheme.colorScheme.primary
+                color = AppColors.Primary
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -132,7 +133,7 @@ fun ExpensesContent(
                     Text(
                         text = "Пока нет расходов. Нажмите + чтобы добавить первую запись",
                         style = SafeSpaceTypography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AppColors.OnSurface
                     )
                 }
             } else {
@@ -145,7 +146,7 @@ fun ExpensesContent(
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                containerColor = AppColors.Surface
                             )
                         ) {
                             val categoryEnum = ExpenseCategory.fromName(expense.category)
@@ -159,13 +160,13 @@ fun ExpensesContent(
                                     modifier = Modifier
                                         .size(48.dp)
                                         .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                                        .background(AppColors.SecondaryContainer),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = categoryEnum.icon,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                        tint = AppColors.OnSecondary
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(16.dp))
@@ -179,14 +180,14 @@ fun ExpensesContent(
                                     Text(
                                         text = expense.category,
                                         style = SafeSpaceTypography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = AppColors.OnSurface
                                     )
                                 }
 
                                 Text (
                                     text = "${expense.amount}",
                                     style = SafeSpaceTypography.titleLarge,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = AppColors.Primary
                                 )
                             }
                         }

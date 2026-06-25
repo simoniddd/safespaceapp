@@ -53,6 +53,7 @@ dependencies {
     // Core
     implementation(projects.core.di)
     implementation(projects.core.presentation)
+    implementation(projects.core.ui)
 
     // Features
     implementation(projects.feature.expenses.api)

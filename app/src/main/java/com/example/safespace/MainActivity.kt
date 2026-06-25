@@ -12,7 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.example.safespace.feature.expenses.navigation.ExpensesEntryPoint
 import com.example.safespace.feature.expenses.presentation.navigation.expensesGraph
-import com.example.safespace.ui.theme.SafeSpaceTheme
+import com.example.safespace.core.ui.theme.SafeSpaceTheme
 import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
