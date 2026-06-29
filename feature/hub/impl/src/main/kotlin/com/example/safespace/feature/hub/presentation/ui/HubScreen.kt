@@ -1,0 +1,553 @@
+package com.example.safespace.feature.hub.presentation.ui
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+// --- Цвета из HTML ---
+private val SandBackground = Color(0xFFDCCDBA)
+private val NeonYellow = Color(0xFFF6EA00)
+private val ElectricBlue = Color(0xFF3B5BFF)
+private val CoralRed = Color(0xFFFF5E5E)
+private val PureBlack = Color(0xFF141414)
+
+@Composable
+fun HubScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SandBackground)
+    ) {
+        // --- 1. AMBIENT GLOWS (Световые пятна на фоне) ---
+        Box(
+            modifier = Modifier
+                .offset(x = (-60).dp, y = 140.dp)
+                .size(340.dp, 280.dp)
+                .blur(88.dp)
+                .background(NeonYellow.copy(alpha = 0.5f), CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .offset(x = 200.dp, y = 380.dp)
+                .size(280.dp)
+                .blur(95.dp)
+                .background(ElectricBlue.copy(alpha = 0.35f), CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .offset(x = (-70).dp, y = 560.dp)
+                .size(280.dp)
+                .blur(100.dp)
+                .background(CoralRed.copy(alpha = 0.35f), CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 50.dp, y = 40.dp)
+                .size(260.dp)
+                .blur(90.dp)
+                .background(NeonYellow.copy(alpha = 0.22f), CircleShape)
+        )
+
+        // --- 2. КОНТЕНТ (Поверх стекла) ---
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 18.dp, end = 18.dp, top = 48.dp, bottom = 48.dp)
+        ) {
+            HubHeader()
+            Spacer(modifier = Modifier.height(20.dp))
+            FinancialAnchorCard()
+            Spacer(modifier = Modifier.height(14.dp))
+            EcosystemWidgets()
+            Spacer(modifier = Modifier.height(26.dp))
+            TimelineSection()
+        }
+    }
+}
+
+@Composable
+private fun HubHeader() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = "ПОНЕДЕЛЬНИК · MONDAY",
+                fontSize = 10.sp,
+                letterSpacing = 2.5.sp,
+                color = PureBlack.copy(alpha = 0.5f),
+                fontFamily = FontFamily.Monospace
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Сегодня, 24 Июня",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = PureBlack,
+                letterSpacing = (-0.3).sp
+            )
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(9.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Время
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.White.copy(alpha = 0.32f))
+                    .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 11.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "17:00 ◆",
+                    fontSize = 10.sp,
+                    letterSpacing = 1.sp,
+                    color = PureBlack.copy(alpha = 0.8f),
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+            // Аватар
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF121212).copy(alpha = 0.9f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("СС", color = NeonYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun FinancialAnchorCard() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(32.dp))
+            .background(Color(0xFF101010).copy(alpha = 0.58f))
+            .border(1.dp, Color.White.copy(alpha = 0.13f), RoundedCornerShape(32.dp))
+            .padding(horizontal = 22.dp, vertical = 24.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "ПОТРАЧЕНО СЕГОДНЯ",
+                fontSize = 10.sp,
+                letterSpacing = 2.sp,
+                color = NeonYellow.copy(alpha = 0.75f),
+                fontFamily = FontFamily.Monospace
+            )
+            Text(
+                text = "SPENT TODAY ↗",
+                fontSize = 10.sp,
+                letterSpacing = 0.5.sp,
+                color = Color.White.copy(alpha = 0.35f),
+                fontFamily = FontFamily.Monospace
+            )
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = "$420",
+                fontSize = 72.sp,
+                color = NeonYellow,
+                fontFamily = FontFamily.Serif,
+                lineHeight = 72.sp
+            )
+            Text(
+                text = ".50",
+                fontSize = 32.sp,
+                color = NeonYellow.copy(alpha = 0.85f),
+                fontFamily = FontFamily.Serif,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+        }
+
+        Text(
+            text = "$179.50 до лимита · limit $600",
+            fontSize = 10.sp,
+            letterSpacing = 0.5.sp,
+            color = Color.White.copy(alpha = 0.4f),
+            fontFamily = FontFamily.Monospace
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Чипы категорий
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            FinanceCategoryChip("Еда · $180")
+            FinanceCategoryChip("Транспорт · $85")
+            FinanceCategoryChip("Разное · $155")
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // Прогресс бар
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(11.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.White.copy(alpha = 0.1f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(Color(0xFFD4CC00), NeonYellow, Color(0xFFFFFFC8).copy(alpha = 0.5f))
+                        )
+                    )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(9.dp))
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("70%", fontSize = 10.sp, color = Color.White.copy(alpha = 0.4f), fontFamily = FontFamily.Monospace)
+            Text("$600.00 лимит", fontSize = 10.sp, color = NeonYellow.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace)
+        }
+    }
+}
+
+@Composable
+private fun FinanceCategoryChip(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(NeonYellow.copy(alpha = 0.14f))
+            .border(1.dp, NeonYellow.copy(alpha = 0.28f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 11.dp, vertical = 5.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 10.sp,
+            color = NeonYellow.copy(alpha = 0.8f),
+            letterSpacing = 0.5.sp,
+            fontFamily = FontFamily.Monospace
+        )
+    }
+}
+
+@Composable
+private fun EcosystemWidgets() {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+
+        // Календарь
+        GlassWidgetCard(
+            title = "Календарь",
+            statusText = "→ 2 Ч.",
+            statusColor = ElectricBlue,
+            subtitle = "19:00 · Встреча с командой\n2 события сегодня",
+            iconContent = {
+                Box(modifier = Modifier.size(13.dp).clip(CircleShape).background(ElectricBlue))
+            },
+            rightContent = {
+                Row(verticalAlignment = Alignment.Top) {
+                    Text("19", fontSize = 26.sp, fontFamily = FontFamily.Serif, color = PureBlack.copy(alpha = 0.8f))
+                    Text(":00", fontSize = 14.sp, fontFamily = FontFamily.Serif, color = PureBlack.copy(alpha = 0.8f), modifier = Modifier.padding(top = 4.dp))
+                }
+            }
+        )
+
+        // Спорт
+        GlassWidgetCard(
+            title = "Спорт",
+            statusText = "✓ ГОТОВО",
+            statusColor = Color(0xFF7A6E00),
+            statusBgColor = Color(0xFFB4A600).copy(alpha = 0.2f),
+            statusBorderColor = Color(0xFFB4A600).copy(alpha = 0.4f),
+            subtitle = "Спина / Бицепс · 45 мин · 320 ккал",
+            iconContent = {
+                Box(
+                    modifier = Modifier.size(38.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawArc(color = NeonYellow, startAngle = 0f, sweepAngle = 360f, useCenter = false, style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round))
+                    }
+                    Box(modifier = Modifier.size(26.dp).clip(CircleShape).background(SandBackground), contentAlignment = Alignment.Center) {
+                        Text("✓", fontSize = 11.sp, color = PureBlack)
+                    }
+                }
+            },
+            rightContent = { Text("↗", fontSize = 13.sp, color = PureBlack.copy(alpha = 0.4f)) }
+        )
+
+        // Покупки
+        GlassWidgetCard(
+            title = "Покупки",
+            statusText = "! СРОЧНО",
+            statusColor = Color(0xFFCC3030),
+            statusBgColor = CoralRed.copy(alpha = 0.2f),
+            statusBorderColor = CoralRed.copy(alpha = 0.45f),
+            subtitle = "",
+            iconContent = {
+                Box(modifier = Modifier.size(13.dp).clip(CircleShape).background(CoralRed))
+            },
+            rightContent = {
+                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(CoralRed), contentAlignment = Alignment.Center) {
+                    Text("8", fontSize = 18.sp, color = Color.White, fontFamily = FontFamily.Serif)
+                }
+            },
+            bottomContent = {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 27.dp, top = 8.dp)) {
+                    Box(modifier = Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF141414).copy(alpha = 0.12f))) {
+                        Box(modifier = Modifier.fillMaxWidth(0.38f).fillMaxHeight().clip(RoundedCornerShape(10.dp)).background(CoralRed))
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("5 / 13 куплено", fontSize = 10.sp, color = PureBlack.copy(alpha = 0.65f), fontFamily = FontFamily.Monospace)
+                }
+            }
+        )
+
+        // Медиа
+        GlassWidgetCard(
+            title = "Медиа",
+            statusText = "ВЕЧЕРОМ",
+            statusColor = PureBlack.copy(alpha = 0.7f),
+            statusBgColor = PureBlack.copy(alpha = 0.09f),
+            statusBorderColor = PureBlack.copy(alpha = 0.18f),
+            subtitle = "",
+            bgColor = Color.White.copy(alpha = 0.18f),
+            iconContent = {
+                Box(modifier = Modifier.size(13.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.9f)).border(1.5.dp, PureBlack.copy(alpha = 0.3f), CircleShape))
+            },
+            rightContent = { Text("↗", fontSize = 13.sp, color = PureBlack.copy(alpha = 0.4f)) },
+            bottomContent = {
+                Column(modifier = Modifier.padding(start = 27.dp, top = 4.dp)) {
+                    Text("Дюна · стр. 240 / 360 · осталось 120", fontSize = 11.sp, color = PureBlack.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF141414).copy(alpha = 0.12f))) {
+                        Box(modifier = Modifier.fillMaxWidth(0.67f).fillMaxHeight().clip(RoundedCornerShape(10.dp)).background(PureBlack.copy(alpha = 0.45f)))
+                    }
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun GlassWidgetCard(
+    title: String,
+    statusText: String,
+    statusColor: Color,
+    subtitle: String,
+    iconContent: @Composable () -> Unit,
+    rightContent: @Composable () -> Unit,
+    bgColor: Color = Color.White.copy(alpha = 0.26f),
+    statusBgColor: Color = statusColor.copy(alpha = 0.22f),
+    statusBorderColor: Color = statusColor.copy(alpha = 0.45f),
+    bottomContent: @Composable (() -> Unit)? = null
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(26.dp))
+            .background(bgColor)
+            .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(26.dp))
+            .padding(horizontal = 18.dp, vertical = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            iconContent()
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text(text = title, fontSize = 20.sp, fontFamily = FontFamily.Serif, color = PureBlack)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(statusBgColor)
+                            .border(1.dp, statusBorderColor, RoundedCornerShape(14.dp))
+                            .padding(horizontal = 9.dp, vertical = 3.dp)
+                    ) {
+                        Text(text = statusText, fontSize = 9.sp, letterSpacing = 1.sp, color = statusColor, fontFamily = FontFamily.Monospace)
+                    }
+                }
+                if (subtitle.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = subtitle, fontSize = 11.sp, color = PureBlack.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace, lineHeight = 16.sp)
+                }
+            }
+            rightContent()
+        }
+        bottomContent?.invoke()
+    }
+}
+
+@Composable
+private fun TimelineSection() {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Text("Хроника дня", fontSize = 24.sp, fontFamily = FontFamily.Serif, color = PureBlack)
+            Text("FEED · 4", fontSize = 10.sp, letterSpacing = 1.5.sp, color = PureBlack.copy(alpha = 0.45f), fontFamily = FontFamily.Monospace)
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp)) {
+            // Вертикальная линия
+            Canvas(modifier = Modifier.matchParentSize()) {
+                drawLine(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            NeonYellow.copy(alpha = 0.45f),
+                            CoralRed.copy(alpha = 0.35f),
+                            ElectricBlue.copy(alpha = 0.55f),
+                            PureBlack.copy(alpha = 0.12f)
+                        )
+                    ),
+                    start = Offset(6.5.dp.toPx(), 20.dp.toPx()),
+                    end = Offset(6.5.dp.toPx(), size.height - 22.dp.toPx()),
+                    strokeWidth = 1.5.dp.toPx()
+                )
+            }
+
+            Column {
+                TimelineItem(
+                    dotColor = Color(0xFFB8A800),
+                    time = "09:00",
+                    title = "Утренняя тренировка завершена",
+                    subtitle = "СПОРТ · 45 мин · 320 ккал",
+                    isPast = true
+                )
+                TimelineItem(
+                    dotColor = Color(0xFFB03030),
+                    time = "13:30",
+                    title = "Супермаркет · −$84.20",
+                    subtitle = "РАСХОДЫ + ПОКУПКИ · 5 вычеркнуто",
+                    isPast = true
+                )
+                TimelineItemActive(
+                    time = "19:00",
+                    title = "Встреча с командой",
+                    subtitle = "КАЛЕНДАРЬ · через 2 часа · Zoom"
+                )
+                TimelineItemFuture(
+                    time = "22:00",
+                    title = "Прочитать 20 страниц",
+                    subtitle = "МЕДИА · Дюна · стр. 240 → 260"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimelineItem(dotColor: Color, time: String, title: String, subtitle: String, isPast: Boolean) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(modifier = Modifier.size(13.dp).clip(CircleShape).background(dotColor).padding(top = 3.dp))
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = PureBlack.copy(alpha = if (isPast) 0.6f else 1f),
+                textDecoration = if (isPast) TextDecoration.LineThrough else null,
+                fontFamily = FontFamily.Monospace
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(text = subtitle, fontSize = 10.sp, letterSpacing = 1.sp, color = PureBlack.copy(alpha = 0.42f), fontFamily = FontFamily.Monospace)
+        }
+        Text(text = time, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = PureBlack.copy(alpha = 0.6f), fontFamily = FontFamily.Monospace)
+    }
+}
+
+@Composable
+private fun TimelineItemActive(time: String, title: String, subtitle: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(13.dp)
+                .clip(CircleShape)
+                .background(ElectricBlue.copy(alpha = 0.25f))
+                .border(2.5.dp, ElectricBlue, CircleShape)
+                .padding(top = 3.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PureBlack, fontFamily = FontFamily.Monospace)
+                Box(modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(ElectricBlue).padding(horizontal = 8.dp, vertical = 2.dp)) {
+                    Text("СКОРО", fontSize = 9.sp, letterSpacing = 1.sp, color = Color.White, fontFamily = FontFamily.Monospace)
+                }
+            }
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(text = subtitle, fontSize = 10.sp, letterSpacing = 1.sp, color = PureBlack.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace)
+        }
+        Text(text = time, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = ElectricBlue, fontFamily = FontFamily.Monospace)
+    }
+}
+
+@Composable
+private fun TimelineItemFuture(time: String, title: String, subtitle: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(modifier = Modifier.size(13.dp).border(1.5.dp, PureBlack.copy(alpha = 0.5f), CircleShape).padding(top = 3.dp))
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PureBlack.copy(alpha = 0.5f), fontFamily = FontFamily.Monospace)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(text = subtitle, fontSize = 10.sp, letterSpacing = 1.sp, color = PureBlack.copy(alpha = 0.35f), fontFamily = FontFamily.Monospace)
+        }
+        Text(text = time, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = PureBlack.copy(alpha = 0.3f), fontFamily = FontFamily.Monospace)
+    }
+}
+
+// Посмотри на этот Preview. Он отрендерит ровно то, что было в HTML.
+@Preview(showBackground = true)
+@Composable
+fun HubScreenLiquidGlassPreview() {
+    HubScreen()
+}

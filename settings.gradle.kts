@@ -37,3 +37,7 @@ include(":core:presentation")
 // Feature: Expenses
 include(":feature:expenses:api")
 include(":feature:expenses:impl")
+
+// Feature: Hub
+include(":feature:hub:api")
+include(":feature:hub:impl")

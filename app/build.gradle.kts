@@ -58,6 +58,8 @@ dependencies {
     // Features
     implementation(projects.feature.expenses.api)
     implementation(projects.feature.expenses.impl)
+    implementation(projects.feature.hub.api)
+    implementation(projects.feature.hub.impl)
 
     // KOIN
     implementation(libs.koin.android)

@@ -13,11 +13,14 @@ import androidx.navigation.compose.rememberNavController
 import com.example.safespace.feature.expenses.navigation.ExpensesEntryPoint
 import com.example.safespace.feature.expenses.presentation.navigation.expensesGraph
 import com.example.safespace.core.ui.theme.SafeSpaceTheme
+import com.example.safespace.feature.hub.navigation.HubEntryPoint
+import com.example.safespace.feature.hub.presentation.navigation.hubGraph
 import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
 
-    private val expensesEntryPoint: ExpensesEntryPoint by inject()
+    //private val expensesEntryPoint: ExpensesEntryPoint by inject()
+    private val hubEntryPoint: HubEntryPoint by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,10 +32,11 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = expensesEntryPoint.expensesRoute(),
+                        startDestination = hubEntryPoint.hubRoute(),
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         expensesGraph()
+                        hubGraph()
                     }
                 }
             }
