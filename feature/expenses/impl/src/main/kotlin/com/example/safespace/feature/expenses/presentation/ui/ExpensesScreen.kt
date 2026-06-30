@@ -1,297 +1,129 @@
 package com.example.safespace.feature.expenses.presentation.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SheetState
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.safespace.core.ui.components.ExpenseCategory
-import com.example.safespace.core.ui.theme.AppColors
-import com.example.safespace.core.ui.theme.SafeSpaceTypography
-import com.example.safespace.feature.expenses.domain.model.ExpensesItem
+import com.example.safespace.core.ui.theme.AppColors.NeonYellow
+import com.example.safespace.core.ui.theme.AppColors.PureBlack
+import com.example.safespace.core.ui.theme.AppColors.SandBackground
 import com.example.safespace.feature.expenses.presentation.action.ExpensesUiEvent
-import com.example.safespace.feature.expenses.presentation.state.ExpensesState
-import com.example.safespace.feature.expenses.presentation.ui.components.CategoryFilterDropdown
-import com.example.safespace.feature.expenses.presentation.ui.components.CategorySelector
+import com.example.safespace.feature.expenses.presentation.ui.components.AddExpenseBottomSheet
+import com.example.safespace.feature.expenses.presentation.ui.components.AmbientGlowBackground
+import com.example.safespace.feature.expenses.presentation.ui.components.CategoryDietRow
+import com.example.safespace.feature.expenses.presentation.ui.components.DateHeaderRow
+import com.example.safespace.feature.expenses.presentation.ui.components.ExpensesHeader
+import com.example.safespace.feature.expenses.presentation.ui.components.MonthlyAnchorCard
+import com.example.safespace.feature.expenses.presentation.ui.components.TransactionRow
 import com.example.safespace.feature.expenses.presentation.viewmodel.ExpensesViewModel
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun ExpensesScreen(
-    viewModel: ExpensesViewModel = koinViewModel()
+    viewModel: ExpensesViewModel = koinViewModel(),
+    onNavigateBack: () -> Unit = {}
 ) {
-    //подписываемся на стейтфлоу
     val state by viewModel.state.collectAsState()
 
-    ExpensesContent(state, viewModel::onEvent)
-}
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SandBackground)
+    ) {
+        AmbientGlowBackground()
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ExpensesContent(
-    state: ExpensesState,
-    onEvent: (ExpensesUiEvent) -> Unit // <-- Добавили лямбду для проброса событий наверх
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 120.dp)
+        ) {
+            item { ExpensesHeader(onBackClick = onNavigateBack) }
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { onEvent(ExpensesUiEvent.OnToggleAddSheet(true)) },
-                containerColor = AppColors.PrimaryContainer
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                MonthlyAnchorCard(totalSpent = state.totalSum)
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                CategoryDietRow(categoryTotals = state.categoryTotals)
+            }
+
+            state.groupedExpenses.forEach { (date, dailyExpenses) ->
+                val dailyTotal = dailyExpenses.sumOf { it.amount }
+                item {
+                    Spacer(modifier = Modifier.height(28.dp))
+                    DateHeaderRow(date = date, dailyTotal = dailyTotal)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                items(dailyExpenses) { expense ->
+                    TransactionRow(expense = expense)
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(110.dp)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, SandBackground)))
+        )
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+                .size(64.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset(y = 6.dp)
+                    .blur(16.dp)
+                    .background(NeonYellow.copy(alpha = 0.6f), CircleShape)
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(NeonYellow)
+                    .clickable { viewModel.onEvent(ExpensesUiEvent.OnToggleAddSheet(true)) },
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null
-                )
-            }
-        }
-
-
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "SafeSpace",
-                style = SafeSpaceTypography.headlineMedium,
-                color = AppColors.Primary
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ){
-                Text(
-                    text = "История",
-                    style = SafeSpaceTypography.titleMedium
-                )
-                CategoryFilterDropdown(
-                    selectedFilter = state.currentFilter,
-                    onFilterSelected = { onEvent.invoke(ExpensesUiEvent.OnFilterChanged(it))}
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Итого за период: ${state.totalSum}",
-                style = SafeSpaceTypography.titleLarge,
-                color = AppColors.Primary
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (state.expenses.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Пока нет расходов. Нажмите + чтобы добавить первую запись",
-                        style = SafeSpaceTypography.bodyLarge,
-                        color = AppColors.OnSurface
-                    )
-                }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(state.expenses, key = { it.id }) { expense ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.cardColors(
-                                containerColor = AppColors.Surface
-                            )
-                        ) {
-                            val categoryEnum = ExpenseCategory.fromName(expense.category)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .clip(CircleShape)
-                                        .background(AppColors.SecondaryContainer),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = categoryEnum.icon,
-                                        contentDescription = null,
-                                        tint = AppColors.OnSecondary
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(16.dp))
-
-                                Column(modifier = Modifier.weight(1f)){
-                                    Text(
-                                        text = expense.description,
-                                        style = SafeSpaceTypography.titleMedium
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = expense.category,
-                                        style = SafeSpaceTypography.bodyMedium,
-                                        color = AppColors.OnSurface
-                                    )
-                                }
-
-                                Text (
-                                    text = "${expense.amount}",
-                                    style = SafeSpaceTypography.titleLarge,
-                                    color = AppColors.Primary
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            if (state.isAddSheetOpened) {
-                AddExpenseModalBottomSheet(
-                    state = state,
-                    sheetState = sheetState,
-                    onEvent = onEvent
+                    imageVector = Icons.Rounded.Add,
+                    contentDescription = "Добавить расход",
+                    tint = PureBlack,
+                    modifier = Modifier.size(32.dp)
                 )
             }
         }
     }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AddExpenseModalBottomSheet(
-    state: ExpensesState,
-    sheetState: SheetState,
-    onEvent: (ExpensesUiEvent) -> Unit
-) {
-    ModalBottomSheet(
-        onDismissRequest = { onEvent.invoke(ExpensesUiEvent.OnToggleAddSheet(false)) },
-        sheetState = sheetState
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(
-                    bottom = WindowInsets.navigationBars.asPaddingValues()
-                        .calculateBottomPadding() + 16.dp
-                )
-        ) {
-            Text(
-                text = "Новый расход",
-                style = SafeSpaceTypography.titleLarge
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = state.inputAmount,
-                onValueChange = { onEvent.invoke(ExpensesUiEvent.OnAmountChanged(it)) },
-                label = { Text("Сумма") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = state.inputDescription,
-                onValueChange = { onEvent.invoke(ExpensesUiEvent.OnDescriptionChanged(it)) },
-                label = { Text("На что потратил?") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-
-            CategorySelector(
-                selectedCategory = state.selectedCategory,
-                onCategorySelected = {onEvent.invoke(ExpensesUiEvent.OnCategorySelected(it))}
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = { onEvent.invoke(ExpensesUiEvent.OnAddExpenseClicked) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = state.inputAmount.isNotBlank()
-            ) {
-                Text(
-                    text = "Добавить"
-                )
-            }
-        }
+    if (state.isAddSheetOpened) {
+        AddExpenseBottomSheet(state = state, onEvent = viewModel::onEvent)
     }
-}
-
-@Preview(showBackground = true, name = "LightTheme")
-@Composable
-private fun ExpensesScreenPreview() {
-    ExpensesContent(
-        state = ExpensesState(
-            inputAmount = "2500",
-            inputDescription = "YandexTaxi",
-            expenses = listOf(
-                ExpensesItem(
-                    id = "1",
-                    4500.0,
-                    description = "Magnum (beverage)",
-                    category = "Beverage",
-                    dateString = "Today"
-                ),
-                ExpensesItem(
-                    id = "2",
-                    2500.0,
-                    description = "Small (beverage)",
-                    category = "Beverage",
-                    dateString = "Yesterday"
-                )
-            )
-        ),
-        onEvent = {}
-    )
 }

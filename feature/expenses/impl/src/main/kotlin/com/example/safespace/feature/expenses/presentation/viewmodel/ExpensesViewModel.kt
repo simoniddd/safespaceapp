@@ -17,6 +17,10 @@ class ExpensesViewModel(
     private var allExpenses: List<ExpensesItem> = emptyList()
 
     init {
+        loadExpenses()
+    }
+
+    private fun loadExpenses() {
         viewModelScope.launch {
             repository.getAllExpenses().collect { expensesList ->
                 allExpenses = expensesList
@@ -59,8 +63,22 @@ class ExpensesViewModel(
 
     private fun applyFilters() {
         val currentFilter = state.value.currentFilter
-        val filteredList = if (currentFilter == null) allExpenses
+        val filtered = if (currentFilter == null) allExpenses
         else allExpenses.filter { it.category == currentFilter.displayName }
-        updateState { copy(expenses = filteredList, totalSum = filteredList.sumOf { it.amount }) }
+
+        val grouped = filtered.groupBy { it.dateString }
+        val categoryTotals = filtered
+            .groupBy { it.category }
+            .map { (cat, items) -> cat to items.sumOf { it.amount } }
+            .sortedByDescending { it.second }
+
+        updateState {
+            copy(
+                expenses = filtered,
+                totalSum = filtered.sumOf { it.amount },
+                groupedExpenses = grouped,
+                categoryTotals = categoryTotals
+            )
+        }
     }
 }

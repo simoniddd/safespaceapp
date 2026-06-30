@@ -60,8 +60,6 @@ object AppColors {
     val SoftWhite = Color(0xFFEAE0D3)
     val CoralRed = Color(0xFFFF5E5E)
 
-
-
     val Primary = Color(0xFF6750A4)
     val OnPrimary = Color(0xFFFFFFFF)
     val PrimaryContainer = Color(0xFFEADDFF)

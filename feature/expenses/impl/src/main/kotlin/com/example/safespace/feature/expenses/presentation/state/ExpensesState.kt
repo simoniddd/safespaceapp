@@ -5,11 +5,14 @@ import com.example.safespace.feature.expenses.domain.model.ExpensesItem
 
 data class ExpensesState(
     val expenses: List<ExpensesItem> = emptyList(),
+
     val inputAmount: String = "",
     val inputDescription: String = "",
     val selectedCategory: ExpenseCategory = ExpenseCategory.OTHER,
     val isAddSheetOpened: Boolean = false,
-
     val currentFilter: ExpenseCategory? = null,
-    val totalSum: Double = 0.0
+
+    val totalSum: Double = 0.0,
+    val groupedExpenses: Map<String, List<ExpensesItem>> = emptyMap(),
+    val categoryTotals: List<Pair<String, Double>> = emptyList()
 )
