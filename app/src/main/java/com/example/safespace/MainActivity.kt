@@ -8,36 +8,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.rememberNavController
-import com.example.safespace.feature.expenses.navigation.ExpensesEntryPoint
-import com.example.safespace.feature.expenses.presentation.navigation.expensesGraph
 import com.example.safespace.core.ui.theme.SafeSpaceTheme
-import com.example.safespace.feature.hub.navigation.HubEntryPoint
-import com.example.safespace.feature.hub.presentation.navigation.hubGraph
-import org.koin.android.ext.android.inject
+import com.example.safespace.navigation.AppNavigation
 
 class MainActivity : ComponentActivity() {
-
-    //private val expensesEntryPoint: ExpensesEntryPoint by inject()
-    private val hubEntryPoint: HubEntryPoint by inject()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             SafeSpaceTheme {
-                val navController = rememberNavController()
-
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    NavHost(
-                        navController = navController,
-                        startDestination = hubEntryPoint.hubRoute(),
-                        modifier = Modifier.padding(innerPadding)
-                    ) {
-                        expensesGraph()
-                        hubGraph()
-                    }
+                    AppNavigation(modifier = Modifier.padding(innerPadding))
                 }
             }
         }

@@ -58,6 +58,9 @@ object AppColors {
     val NeonYellow = Color(0xFFF6EA00)
     val ElectricBlue = Color(0xFF3B5BFF)
     val SoftWhite = Color(0xFFEAE0D3)
+    val CoralRed = Color(0xFFFF5E5E)
+
+
 
     val Primary = Color(0xFF6750A4)
     val OnPrimary = Color(0xFFFFFFFF)

@@ -2,6 +2,7 @@ package com.example.safespace.feature.expenses.presentation.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.example.safespace.core.presentation.StatefulViewModel
+import com.example.safespace.core.presentation.navigation.Navigator
 import com.example.safespace.feature.expenses.domain.model.ExpensesItem
 import com.example.safespace.feature.expenses.domain.repository.ExpensesRepository
 import com.example.safespace.feature.expenses.presentation.action.ExpensesUiEvent
@@ -9,8 +10,9 @@ import com.example.safespace.feature.expenses.presentation.state.ExpensesState
 import kotlinx.coroutines.launch
 
 class ExpensesViewModel(
-    private val repository: ExpensesRepository
-) : StatefulViewModel<ExpensesState>(ExpensesState()) {
+    private val repository: ExpensesRepository,
+    navigator: Navigator
+) : StatefulViewModel<ExpensesState>(ExpensesState(), navigator) {
 
     private var allExpenses: List<ExpensesItem> = emptyList()
 

@@ -8,5 +8,5 @@ import org.koin.dsl.module
 
 val hubModule = module {
     single<HubEntryPoint> { HubEntryPointImpl() }
-    viewModel { HubViewModel(get()) }
+    viewModel { HubViewModel(get(), get(), get()) }
 }

@@ -2,6 +2,7 @@ package com.example.safespace
 
 import android.app.Application
 import com.example.safespace.core.di.appModule
+import com.example.safespace.core.presentation.di.presentationModule
 import com.example.safespace.feature.expenses.di.expensesModule
 import com.example.safespace.feature.hub.di.hubModule
 import org.koin.android.ext.koin.androidContext
@@ -13,6 +14,7 @@ class SafeSpaceApp : Application() {
         startKoin {
             androidContext(this@SafeSpaceApp)
             modules(
+                presentationModule,
                 appModule,
                 expensesModule,
                 hubModule,

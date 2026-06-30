@@ -15,4 +15,5 @@ android {
 dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.koin.android)
 }

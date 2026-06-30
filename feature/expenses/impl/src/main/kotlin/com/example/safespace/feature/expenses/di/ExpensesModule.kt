@@ -11,5 +11,5 @@ import org.koin.dsl.module
 val expensesModule = module {
     single<ExpensesEntryPoint> { ExpensesEntryPointImpl() }
     single<ExpensesRepository> { ExpensesRepositoryImpl(get()) }
-    viewModel { ExpensesViewModel(get()) }
+    viewModel { ExpensesViewModel(get(), get()) }
 }

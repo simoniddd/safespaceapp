@@ -3,13 +3,28 @@ package com.example.safespace.feature.hub.presentation.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -25,16 +40,21 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-// --- Цвета из HTML ---
-private val SandBackground = Color(0xFFDCCDBA)
-private val NeonYellow = Color(0xFFF6EA00)
-private val ElectricBlue = Color(0xFF3B5BFF)
-private val CoralRed = Color(0xFFFF5E5E)
-private val PureBlack = Color(0xFF141414)
+import com.example.safespace.core.ui.theme.AppColors.CoralRed
+import com.example.safespace.core.ui.theme.AppColors.ElectricBlue
+import com.example.safespace.core.ui.theme.AppColors.NeonYellow
+import com.example.safespace.core.ui.theme.AppColors.PureBlack
+import com.example.safespace.core.ui.theme.AppColors.SandBackground
+import com.example.safespace.feature.hub.presentation.state.HubTimelineItem
+import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun HubScreen() {
+fun HubScreen(viewModel: HubViewModel = koinViewModel()) {
+    val state by viewModel.state.collectAsState()
+
+    val dailyLimit = 600.0
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -76,21 +96,26 @@ fun HubScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 18.dp, end = 18.dp, top = 48.dp, bottom = 48.dp)
+                .padding(start = 18.dp, end = 18.dp, bottom = 48.dp)
         ) {
-            HubHeader()
+            HubHeader(userName = "Alex")
             Spacer(modifier = Modifier.height(20.dp))
-            FinancialAnchorCard()
+            FinancialAnchorCard(
+                spent = state.dailyExpenses,
+                limit = dailyLimit,
+                onClick = viewModel::onExpensesClicked)
             Spacer(modifier = Modifier.height(14.dp))
             EcosystemWidgets()
             Spacer(modifier = Modifier.height(26.dp))
-            TimelineSection()
+            TimelineSection(state.timelineItems)
         }
     }
 }
 
 @Composable
-private fun HubHeader() {
+private fun HubHeader(
+    userName: String
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -141,18 +166,38 @@ private fun HubHeader() {
                     .background(Color(0xFF121212).copy(alpha = 0.9f)),
                 contentAlignment = Alignment.Center
             ) {
-                Text("СС", color = NeonYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = userName,
+                    color = NeonYellow,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
 }
 
 @Composable
-private fun FinancialAnchorCard() {
+private fun FinancialAnchorCard(
+    spent: Double,
+    limit: Double,
+    onClick: () -> Unit
+) {
+    // 1. Математика прогресса
+    val remaining = (limit - spent).coerceAtLeast(0.0) // Чтобы не уходило в минус
+    val progress = (spent / limit).coerceIn(0.0, 1.0)
+    val progressPercent = (progress * 100).toInt()
+
+    // 2. Форматируем сумму для крупного шрифта (бьем на целые и сотые)
+    val spentFormatted = "%.2f".format(spent).split(".")
+    val spentMain = spentFormatted.getOrElse(0) { "0" }
+    val spentDecimals = spentFormatted.getOrElse(1) { "00" }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(32.dp))
+            .clickable{ onClick() }
             .background(Color(0xFF101010).copy(alpha = 0.58f))
             .border(1.dp, Color.White.copy(alpha = 0.13f), RoundedCornerShape(32.dp))
             .padding(horizontal = 22.dp, vertical = 24.dp)
@@ -181,14 +226,14 @@ private fun FinancialAnchorCard() {
 
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
-                text = "$420",
+                text = spentMain,
                 fontSize = 72.sp,
                 color = NeonYellow,
                 fontFamily = FontFamily.Serif,
                 lineHeight = 72.sp
             )
             Text(
-                text = ".50",
+                text = ".${spentDecimals}",
                 fontSize = 32.sp,
                 color = NeonYellow.copy(alpha = 0.85f),
                 fontFamily = FontFamily.Serif,
@@ -197,7 +242,7 @@ private fun FinancialAnchorCard() {
         }
 
         Text(
-            text = "$179.50 до лимита · limit $600",
+            text = "$${"%.2f".format(remaining)} до лимита · limit $${"%.2f".format(limit)}",
             fontSize = 10.sp,
             letterSpacing = 0.5.sp,
             color = Color.White.copy(alpha = 0.4f),
@@ -225,12 +270,16 @@ private fun FinancialAnchorCard() {
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.7f)
+                    .fillMaxWidth(progress.toFloat())
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(20.dp))
                     .background(
                         Brush.horizontalGradient(
-                            colors = listOf(Color(0xFFD4CC00), NeonYellow, Color(0xFFFFFFC8).copy(alpha = 0.5f))
+                            colors = listOf(
+                                Color(0xFFD4CC00),
+                                NeonYellow,
+                                Color(0xFFFFFFC8).copy(alpha = 0.5f)
+                            )
                         )
                     )
             )
@@ -239,8 +288,18 @@ private fun FinancialAnchorCard() {
         Spacer(modifier = Modifier.height(9.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("70%", fontSize = 10.sp, color = Color.White.copy(alpha = 0.4f), fontFamily = FontFamily.Monospace)
-            Text("$600.00 лимит", fontSize = 10.sp, color = NeonYellow.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace)
+            Text(
+                "${progressPercent}",
+                fontSize = 10.sp,
+                color = Color.White.copy(alpha = 0.4f),
+                fontFamily = FontFamily.Monospace
+            )
+            Text(
+                "$${"%.2f".format(limit)} лимит",
+                fontSize = 10.sp,
+                color = NeonYellow.copy(alpha = 0.7f),
+                fontFamily = FontFamily.Monospace
+            )
         }
     }
 }
@@ -275,12 +334,28 @@ private fun EcosystemWidgets() {
             statusColor = ElectricBlue,
             subtitle = "19:00 · Встреча с командой\n2 события сегодня",
             iconContent = {
-                Box(modifier = Modifier.size(13.dp).clip(CircleShape).background(ElectricBlue))
+                Box(
+                    modifier = Modifier
+                        .size(13.dp)
+                        .clip(CircleShape)
+                        .background(ElectricBlue)
+                )
             },
             rightContent = {
                 Row(verticalAlignment = Alignment.Top) {
-                    Text("19", fontSize = 26.sp, fontFamily = FontFamily.Serif, color = PureBlack.copy(alpha = 0.8f))
-                    Text(":00", fontSize = 14.sp, fontFamily = FontFamily.Serif, color = PureBlack.copy(alpha = 0.8f), modifier = Modifier.padding(top = 4.dp))
+                    Text(
+                        "19",
+                        fontSize = 26.sp,
+                        fontFamily = FontFamily.Serif,
+                        color = PureBlack.copy(alpha = 0.8f)
+                    )
+                    Text(
+                        ":00",
+                        fontSize = 14.sp,
+                        fontFamily = FontFamily.Serif,
+                        color = PureBlack.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
         )
@@ -299,9 +374,20 @@ private fun EcosystemWidgets() {
                     contentAlignment = Alignment.Center
                 ) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
-                        drawArc(color = NeonYellow, startAngle = 0f, sweepAngle = 360f, useCenter = false, style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round))
+                        drawArc(
+                            color = NeonYellow,
+                            startAngle = 0f,
+                            sweepAngle = 360f,
+                            useCenter = false,
+                            style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
+                        )
                     }
-                    Box(modifier = Modifier.size(26.dp).clip(CircleShape).background(SandBackground), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .clip(CircleShape)
+                            .background(SandBackground), contentAlignment = Alignment.Center
+                    ) {
                         Text("✓", fontSize = 11.sp, color = PureBlack)
                     }
                 }
@@ -318,20 +404,50 @@ private fun EcosystemWidgets() {
             statusBorderColor = CoralRed.copy(alpha = 0.45f),
             subtitle = "",
             iconContent = {
-                Box(modifier = Modifier.size(13.dp).clip(CircleShape).background(CoralRed))
+                Box(
+                    modifier = Modifier
+                        .size(13.dp)
+                        .clip(CircleShape)
+                        .background(CoralRed)
+                )
             },
             rightContent = {
-                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(CoralRed), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(CoralRed), contentAlignment = Alignment.Center
+                ) {
                     Text("8", fontSize = 18.sp, color = Color.White, fontFamily = FontFamily.Serif)
                 }
             },
             bottomContent = {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 27.dp, top = 8.dp)) {
-                    Box(modifier = Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF141414).copy(alpha = 0.12f))) {
-                        Box(modifier = Modifier.fillMaxWidth(0.38f).fillMaxHeight().clip(RoundedCornerShape(10.dp)).background(CoralRed))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = 27.dp, top = 8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF141414).copy(alpha = 0.12f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.38f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(CoralRed)
+                        )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
-                    Text("5 / 13 куплено", fontSize = 10.sp, color = PureBlack.copy(alpha = 0.65f), fontFamily = FontFamily.Monospace)
+                    Text(
+                        "5 / 13 куплено",
+                        fontSize = 10.sp,
+                        color = PureBlack.copy(alpha = 0.65f),
+                        fontFamily = FontFamily.Monospace
+                    )
                 }
             }
         )
@@ -346,15 +462,38 @@ private fun EcosystemWidgets() {
             subtitle = "",
             bgColor = Color.White.copy(alpha = 0.18f),
             iconContent = {
-                Box(modifier = Modifier.size(13.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.9f)).border(1.5.dp, PureBlack.copy(alpha = 0.3f), CircleShape))
+                Box(
+                    modifier = Modifier
+                        .size(13.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.9f))
+                        .border(1.5.dp, PureBlack.copy(alpha = 0.3f), CircleShape)
+                )
             },
             rightContent = { Text("↗", fontSize = 13.sp, color = PureBlack.copy(alpha = 0.4f)) },
             bottomContent = {
                 Column(modifier = Modifier.padding(start = 27.dp, top = 4.dp)) {
-                    Text("Дюна · стр. 240 / 360 · осталось 120", fontSize = 11.sp, color = PureBlack.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace)
+                    Text(
+                        "Дюна · стр. 240 / 360 · осталось 120",
+                        fontSize = 11.sp,
+                        color = PureBlack.copy(alpha = 0.7f),
+                        fontFamily = FontFamily.Monospace
+                    )
                     Spacer(modifier = Modifier.height(6.dp))
-                    Box(modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF141414).copy(alpha = 0.12f))) {
-                        Box(modifier = Modifier.fillMaxWidth(0.67f).fillMaxHeight().clip(RoundedCornerShape(10.dp)).background(PureBlack.copy(alpha = 0.45f)))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF141414).copy(alpha = 0.12f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.67f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(PureBlack.copy(alpha = 0.45f))
+                        )
                     }
                 }
             }
@@ -390,8 +529,16 @@ private fun GlassWidgetCard(
             iconContent()
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text(text = title, fontSize = 20.sp, fontFamily = FontFamily.Serif, color = PureBlack)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(9.dp)
+                ) {
+                    Text(
+                        text = title,
+                        fontSize = 20.sp,
+                        fontFamily = FontFamily.Serif,
+                        color = PureBlack
+                    )
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(14.dp))
@@ -399,12 +546,24 @@ private fun GlassWidgetCard(
                             .border(1.dp, statusBorderColor, RoundedCornerShape(14.dp))
                             .padding(horizontal = 9.dp, vertical = 3.dp)
                     ) {
-                        Text(text = statusText, fontSize = 9.sp, letterSpacing = 1.sp, color = statusColor, fontFamily = FontFamily.Monospace)
+                        Text(
+                            text = statusText,
+                            fontSize = 9.sp,
+                            letterSpacing = 1.sp,
+                            color = statusColor,
+                            fontFamily = FontFamily.Monospace
+                        )
                     }
                 }
                 if (subtitle.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = subtitle, fontSize = 11.sp, color = PureBlack.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace, lineHeight = 16.sp)
+                    Text(
+                        text = subtitle,
+                        fontSize = 11.sp,
+                        color = PureBlack.copy(alpha = 0.7f),
+                        fontFamily = FontFamily.Monospace,
+                        lineHeight = 16.sp
+                    )
                 }
             }
             rightContent()
@@ -414,20 +573,34 @@ private fun GlassWidgetCard(
 }
 
 @Composable
-private fun TimelineSection() {
+private fun TimelineSection(
+    items: List<HubTimelineItem>
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom
         ) {
             Text("Хроника дня", fontSize = 24.sp, fontFamily = FontFamily.Serif, color = PureBlack)
-            Text("FEED · 4", fontSize = 10.sp, letterSpacing = 1.5.sp, color = PureBlack.copy(alpha = 0.45f), fontFamily = FontFamily.Monospace)
+            Text(
+                "FEED · ${items.size}",
+                fontSize = 10.sp,
+                letterSpacing = 1.5.sp,
+                color = PureBlack.copy(alpha = 0.45f),
+                fontFamily = FontFamily.Monospace
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp)
+        ) {
             // Вертикальная линия
             Canvas(modifier = Modifier.matchParentSize()) {
                 drawLine(
@@ -446,42 +619,54 @@ private fun TimelineSection() {
             }
 
             Column {
-                TimelineItem(
-                    dotColor = Color(0xFFB8A800),
-                    time = "09:00",
-                    title = "Утренняя тренировка завершена",
-                    subtitle = "СПОРТ · 45 мин · 320 ккал",
-                    isPast = true
-                )
-                TimelineItem(
-                    dotColor = Color(0xFFB03030),
-                    time = "13:30",
-                    title = "Супермаркет · −$84.20",
-                    subtitle = "РАСХОДЫ + ПОКУПКИ · 5 вычеркнуто",
-                    isPast = true
-                )
-                TimelineItemActive(
-                    time = "19:00",
-                    title = "Встреча с командой",
-                    subtitle = "КАЛЕНДАРЬ · через 2 часа · Zoom"
-                )
-                TimelineItemFuture(
-                    time = "22:00",
-                    title = "Прочитать 20 страниц",
-                    subtitle = "МЕДИА · Дюна · стр. 240 → 260"
-                )
+                if (items.isEmpty()) {
+                    Text(
+                        text = "Лента пуста",
+                        modifier = Modifier.padding(start = 24.dp, top = 16.dp),
+                        color = PureBlack.copy(alpha = 0.5f)
+                    )
+                } else {
+                    items.forEach { timelineItem ->
+                        when (timelineItem) {
+                            is HubTimelineItem.Expense -> {
+                                val expense = timelineItem.item
+                                TimelineItem(
+                                    dotColor = CoralRed,
+                                    time = expense.dateString,
+                                    title = expense.description,
+                                    subtitle = "${expense.category.uppercase()} · -$${expense.amount}",
+                                    isPast = true
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun TimelineItem(dotColor: Color, time: String, title: String, subtitle: String, isPast: Boolean) {
+private fun TimelineItem(
+    dotColor: Color,
+    time: String,
+    title: String,
+    subtitle: String,
+    isPast: Boolean
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Box(modifier = Modifier.size(13.dp).clip(CircleShape).background(dotColor).padding(top = 3.dp))
+        Box(
+            modifier = Modifier
+                .size(13.dp)
+                .clip(CircleShape)
+                .background(dotColor)
+                .padding(top = 3.dp)
+        )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -493,16 +678,30 @@ private fun TimelineItem(dotColor: Color, time: String, title: String, subtitle:
                 fontFamily = FontFamily.Monospace
             )
             Spacer(modifier = Modifier.height(2.dp))
-            Text(text = subtitle, fontSize = 10.sp, letterSpacing = 1.sp, color = PureBlack.copy(alpha = 0.42f), fontFamily = FontFamily.Monospace)
+            Text(
+                text = subtitle,
+                fontSize = 10.sp,
+                letterSpacing = 1.sp,
+                color = PureBlack.copy(alpha = 0.42f),
+                fontFamily = FontFamily.Monospace
+            )
         }
-        Text(text = time, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = PureBlack.copy(alpha = 0.6f), fontFamily = FontFamily.Monospace)
+        Text(
+            text = time,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = PureBlack.copy(alpha = 0.6f),
+            fontFamily = FontFamily.Monospace
+        )
     }
 }
 
 @Composable
 private fun TimelineItemActive(time: String, title: String, subtitle: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.Top
     ) {
         Box(
@@ -515,33 +714,90 @@ private fun TimelineItemActive(time: String, title: String, subtitle: String) {
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PureBlack, fontFamily = FontFamily.Monospace)
-                Box(modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(ElectricBlue).padding(horizontal = 8.dp, vertical = 2.dp)) {
-                    Text("СКОРО", fontSize = 9.sp, letterSpacing = 1.sp, color = Color.White, fontFamily = FontFamily.Monospace)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = PureBlack,
+                    fontFamily = FontFamily.Monospace
+                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(ElectricBlue)
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        "СКОРО",
+                        fontSize = 9.sp,
+                        letterSpacing = 1.sp,
+                        color = Color.White,
+                        fontFamily = FontFamily.Monospace
+                    )
                 }
             }
             Spacer(modifier = Modifier.height(3.dp))
-            Text(text = subtitle, fontSize = 10.sp, letterSpacing = 1.sp, color = PureBlack.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace)
+            Text(
+                text = subtitle,
+                fontSize = 10.sp,
+                letterSpacing = 1.sp,
+                color = PureBlack.copy(alpha = 0.7f),
+                fontFamily = FontFamily.Monospace
+            )
         }
-        Text(text = time, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = ElectricBlue, fontFamily = FontFamily.Monospace)
+        Text(
+            text = time,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = ElectricBlue,
+            fontFamily = FontFamily.Monospace
+        )
     }
 }
 
 @Composable
 private fun TimelineItemFuture(time: String, title: String, subtitle: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Box(modifier = Modifier.size(13.dp).border(1.5.dp, PureBlack.copy(alpha = 0.5f), CircleShape).padding(top = 3.dp))
+        Box(
+            modifier = Modifier
+                .size(13.dp)
+                .border(1.5.dp, PureBlack.copy(alpha = 0.5f), CircleShape)
+                .padding(top = 3.dp)
+        )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PureBlack.copy(alpha = 0.5f), fontFamily = FontFamily.Monospace)
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = PureBlack.copy(alpha = 0.5f),
+                fontFamily = FontFamily.Monospace
+            )
             Spacer(modifier = Modifier.height(2.dp))
-            Text(text = subtitle, fontSize = 10.sp, letterSpacing = 1.sp, color = PureBlack.copy(alpha = 0.35f), fontFamily = FontFamily.Monospace)
+            Text(
+                text = subtitle,
+                fontSize = 10.sp,
+                letterSpacing = 1.sp,
+                color = PureBlack.copy(alpha = 0.35f),
+                fontFamily = FontFamily.Monospace
+            )
         }
-        Text(text = time, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = PureBlack.copy(alpha = 0.3f), fontFamily = FontFamily.Monospace)
+        Text(
+            text = time,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = PureBlack.copy(alpha = 0.3f),
+            fontFamily = FontFamily.Monospace
+        )
     }
 }
 
