@@ -124,6 +124,16 @@ fun ExpensesScreen(
     }
 
     if (state.isAddSheetOpened) {
-        AddExpenseBottomSheet(state = state, onEvent = viewModel::onEvent)
+        AddExpenseBottomSheet(
+            categories = state.categories,
+            onDismiss = { viewModel.onEvent(ExpensesUiEvent.OnToggleAddSheet(false)) },
+            onSave = { amount, description, category ->
+                viewModel.onEvent(ExpensesUiEvent.OnAmountChanged(amount))
+                viewModel.onEvent(ExpensesUiEvent.OnDescriptionChanged(description))
+                if (category != null) viewModel.onEvent(ExpensesUiEvent.OnCategorySelected(category))
+                viewModel.onEvent(ExpensesUiEvent.OnAddExpenseClicked)
+                viewModel.onEvent(ExpensesUiEvent.OnToggleAddSheet(false))
+            }
+        )
     }
 }

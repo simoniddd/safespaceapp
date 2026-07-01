@@ -5,6 +5,7 @@ import com.example.safespace.feature.expenses.domain.model.ExpensesItem
 
 data class ExpensesState(
     val expenses: List<ExpensesItem> = emptyList(),
+    val categories: List<ExpenseCategory> = ExpenseCategory.entries,
 
     val inputAmount: String = "",
     val inputDescription: String = "",

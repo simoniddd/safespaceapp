@@ -10,13 +10,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class ExpenseCategory(
     val displayName: String,
+    val emoji: String,
     val icon: ImageVector
 ) {
-    FOOD("Еда", Icons.Default.Favorite),
-    SHOPPING("Покупки", Icons.Default.ShoppingCart),
-    HOME("Дом", Icons.Default.Home),
-    SPORT("Спорт", Icons.Default.Star),
-    OTHER("Разное", Icons.Default.Build);
+    FOOD("Еда", "🍽", Icons.Default.Favorite),
+    SHOPPING("Покупки", "🛒", Icons.Default.ShoppingCart),
+    HOME("Дом", "🏠", Icons.Default.Home),
+    SPORT("Спорт", "💪", Icons.Default.Star),
+    OTHER("Разное", "📦", Icons.Default.Build);
 
     companion object {
         fun fromName(name: String): ExpenseCategory {
