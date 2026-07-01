@@ -41,3 +41,7 @@ include(":feature:expenses:impl")
 // Feature: Hub
 include(":feature:hub:api")
 include(":feature:hub:impl")
+
+// Feature: Calendar
+include(":feature:calendar:api")
+include(":feature:calendar:impl")

@@ -20,6 +20,7 @@ dependencies {
     implementation(projects.core.ui)
     implementation(projects.core.presentation)
     implementation(projects.feature.expenses.api)
+    implementation(projects.feature.calendar.api)
 
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.navigation.compose)

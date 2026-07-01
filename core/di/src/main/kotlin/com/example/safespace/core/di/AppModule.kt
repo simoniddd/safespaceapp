@@ -21,4 +21,7 @@ val appModule = module {
     single {
         get<SafeSpaceDatabase>().expensesDao
     }
+    single {
+        get<SafeSpaceDatabase>().calendarDao
+    }
 }

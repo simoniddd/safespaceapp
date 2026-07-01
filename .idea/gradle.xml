@@ -16,6 +16,9 @@
             <option value="$PROJECT_DIR$/core/presentation" />
             <option value="$PROJECT_DIR$/core/ui" />
             <option value="$PROJECT_DIR$/feature" />
+            <option value="$PROJECT_DIR$/feature/calendar" />
+            <option value="$PROJECT_DIR$/feature/calendar/api" />
+            <option value="$PROJECT_DIR$/feature/calendar/impl" />
             <option value="$PROJECT_DIR$/feature/expenses" />
             <option value="$PROJECT_DIR$/feature/expenses/api" />
             <option value="$PROJECT_DIR$/feature/expenses/impl" />

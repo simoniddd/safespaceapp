@@ -60,6 +60,8 @@ dependencies {
     implementation(projects.feature.expenses.impl)
     implementation(projects.feature.hub.api)
     implementation(projects.feature.hub.impl)
+    implementation(projects.feature.calendar.api)
+    implementation(projects.feature.calendar.impl)
 
     // KOIN
     implementation(libs.koin.android)

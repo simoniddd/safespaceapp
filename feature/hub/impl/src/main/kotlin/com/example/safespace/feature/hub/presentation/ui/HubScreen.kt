@@ -638,6 +638,8 @@ private fun TimelineSection(
                                     isPast = true
                                 )
                             }
+
+                            is HubTimelineItem.Event -> TODO()
                         }
                     }
                 }
