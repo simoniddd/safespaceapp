@@ -1,4 +1,4 @@
-package com.example.safespace.feature.calendar.domain.model
+package com.example.safespace.core.domain.model
 
 enum class EventType {
     WORK, SPORT, PERSONAL, ENTERTAINMENT

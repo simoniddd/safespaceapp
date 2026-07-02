@@ -23,14 +23,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.safespace.core.ui.components.ExpenseCategory
+import com.example.safespace.core.domain.model.ExpenseCategory
+import com.example.safespace.core.domain.model.ExpensesItem
+import com.example.safespace.core.ui.components.icon
 import com.example.safespace.core.ui.theme.AppColors.CoralRed
 import com.example.safespace.core.ui.theme.AppColors.ElectricBlue
 import com.example.safespace.core.ui.theme.AppColors.PureBlack
 import com.example.safespace.core.ui.theme.BodyFont
 import com.example.safespace.core.ui.theme.MonoFont
 import com.example.safespace.core.ui.theme.TitleFont
-import com.example.safespace.feature.expenses.domain.model.ExpensesItem
 
 @Composable
 internal fun DateHeaderRow(date: String, dailyTotal: Double) {
@@ -78,7 +79,7 @@ internal fun TransactionRow(expense: ExpensesItem) {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = category.icon,
+                imageVector = category.icon(),
                 contentDescription = null,
                 tint = iconColor.copy(alpha = 0.8f),
                 modifier = Modifier.size(20.dp)

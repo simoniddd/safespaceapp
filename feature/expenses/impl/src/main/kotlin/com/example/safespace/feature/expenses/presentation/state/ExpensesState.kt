@@ -1,7 +1,7 @@
 package com.example.safespace.feature.expenses.presentation.state
 
-import com.example.safespace.core.ui.components.ExpenseCategory
-import com.example.safespace.feature.expenses.domain.model.ExpensesItem
+import com.example.safespace.core.domain.model.ExpenseCategory
+import com.example.safespace.core.domain.model.ExpensesItem
 
 data class ExpensesState(
     val expenses: List<ExpensesItem> = emptyList(),

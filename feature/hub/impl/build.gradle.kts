@@ -19,6 +19,7 @@ dependencies {
     implementation(projects.feature.hub.api)
     implementation(projects.core.ui)
     implementation(projects.core.presentation)
+    implementation(projects.core.domain)
     implementation(projects.feature.expenses.api)
     implementation(projects.feature.calendar.api)
 
@@ -28,4 +29,6 @@ dependencies {
 
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
+
+    testImplementation(libs.junit)
 }

@@ -1,6 +1,6 @@
 package com.example.safespace.feature.expenses.domain.repository
 
-import com.example.safespace.feature.expenses.domain.model.ExpensesItem
+import com.example.safespace.core.domain.model.ExpensesItem
 import kotlinx.coroutines.flow.Flow
 
 interface ExpensesRepository {

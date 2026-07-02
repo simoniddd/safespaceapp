@@ -1,4 +1,4 @@
-package com.example.safespace.feature.expenses.domain.model
+package com.example.safespace.core.domain.model
 
 data class ExpensesItem(
     val id: String,

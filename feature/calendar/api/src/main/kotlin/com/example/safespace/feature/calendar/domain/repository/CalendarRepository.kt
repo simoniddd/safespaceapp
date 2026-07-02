@@ -1,7 +1,7 @@
 package com.example.safespace.feature.calendar.domain.repository
 
-import com.example.safespace.feature.calendar.domain.model.CalendarEventItem
-import com.example.safespace.feature.calendar.domain.model.EventType
+import com.example.safespace.core.domain.model.CalendarEventItem
+import com.example.safespace.core.domain.model.EventType
 import kotlinx.coroutines.flow.Flow
 
 interface CalendarRepository {

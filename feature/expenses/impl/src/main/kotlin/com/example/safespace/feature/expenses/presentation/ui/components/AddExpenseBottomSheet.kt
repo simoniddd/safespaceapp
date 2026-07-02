@@ -40,7 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.safespace.core.ui.components.ExpenseCategory
+import com.example.safespace.core.domain.model.ExpenseCategory
 import com.example.safespace.core.ui.theme.AccentRed
 import com.example.safespace.core.ui.theme.AccentYel
 import com.example.safespace.core.ui.theme.Ink

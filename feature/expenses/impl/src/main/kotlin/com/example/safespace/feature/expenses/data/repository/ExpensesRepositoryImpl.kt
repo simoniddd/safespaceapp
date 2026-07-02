@@ -2,7 +2,7 @@ package com.example.safespace.feature.expenses.data.repository
 
 import com.example.safespace.core.data.local.dao.ExpensesDao
 import com.example.safespace.core.data.local.entity.ExpenseEntity
-import com.example.safespace.feature.expenses.domain.model.ExpensesItem
+import com.example.safespace.core.domain.model.ExpensesItem
 import com.example.safespace.feature.expenses.domain.repository.ExpensesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

@@ -33,6 +33,7 @@ include(":core:di")
 include(":core:data")
 include(":core:ui")
 include(":core:presentation")
+include(":core:domain")
 
 // Feature: Expenses
 include(":feature:expenses:api")

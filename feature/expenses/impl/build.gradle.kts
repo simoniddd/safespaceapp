@@ -21,6 +21,7 @@ dependencies {
     implementation(projects.core.data)
     implementation(projects.core.ui)
     implementation(projects.core.presentation)
+    implementation(projects.core.domain)
 
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.navigation.compose)

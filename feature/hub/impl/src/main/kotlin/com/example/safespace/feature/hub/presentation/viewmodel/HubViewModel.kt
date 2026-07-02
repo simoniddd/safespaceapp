@@ -7,8 +7,9 @@ import com.example.safespace.feature.calendar.domain.repository.CalendarReposito
 import com.example.safespace.feature.calendar.navigation.CalendarEntryPoint
 import com.example.safespace.feature.expenses.domain.repository.ExpensesRepository
 import com.example.safespace.feature.expenses.navigation.ExpensesEntryPoint
+import com.example.safespace.feature.hub.domain.interactor.BuildTimelineUseCase
 import com.example.safespace.feature.hub.presentation.state.HubState
-import com.example.safespace.feature.hub.presentation.state.HubTimelineItem
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -19,6 +20,8 @@ class HubViewModel(
     private val calendarEntryPoint: CalendarEntryPoint,
     navigator: Navigator
 ) : StatefulViewModel<HubState>(HubState(), navigator) {
+
+    private val buildTimeLine = BuildTimelineUseCase()
 
     init {
         loadHubData()
@@ -39,13 +42,8 @@ class HubViewModel(
                 calendarRepository.getEventsForDate("Сегодня, 1 июля")
             ) { expenses, events ->
                 val totalSpent = expenses.sumOf { it.amount }
-
-                val expenseItems = expenses.map { HubTimelineItem.Expense(it) }
-                val eventItems = events.map { HubTimelineItem.Event(it) }
-
-                val sortedHubData = (expenseItems + eventItems).sortedBy { it.time }
-                Pair(totalSpent, sortedHubData)
-
+                val timeLineItems = buildTimeLine(expenses, events)
+                Pair(totalSpent, timeLineItems)
             }.collect { (totalSpent, combinedAndSortedItems) ->
                 updateState {
                     copy(

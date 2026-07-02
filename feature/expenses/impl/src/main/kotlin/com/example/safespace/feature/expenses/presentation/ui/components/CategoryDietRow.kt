@@ -22,7 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.safespace.core.ui.components.ExpenseCategory
+import com.example.safespace.core.domain.model.ExpenseCategory
+import com.example.safespace.core.ui.components.icon
 import com.example.safespace.core.ui.theme.AppColors.PureBlack
 import com.example.safespace.core.ui.theme.MonoFont
 
@@ -47,7 +48,7 @@ internal fun CategoryDietRow(categoryTotals: List<Pair<String, Double>>) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
-                        imageVector = category.icon,
+                        imageVector = category.icon(),
                         contentDescription = null,
                         modifier = Modifier.size(12.dp),
                         tint = PureBlack.copy(alpha = 0.7f)

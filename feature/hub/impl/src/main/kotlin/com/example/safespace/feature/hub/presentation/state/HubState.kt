@@ -1,7 +1,7 @@
 package com.example.safespace.feature.hub.presentation.state
 
-import com.example.safespace.feature.calendar.domain.model.CalendarEventItem
-import com.example.safespace.feature.expenses.domain.model.ExpensesItem
+import com.example.safespace.core.domain.model.CalendarEventItem
+import com.example.safespace.core.domain.model.ExpensesItem
 
 // Универсальный элемент ленты
 sealed interface HubTimelineItem {

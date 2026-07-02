@@ -11,7 +11,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.safespace.core.ui.components.ExpenseCategory
+import com.example.safespace.core.domain.model.ExpenseCategory
+import com.example.safespace.core.ui.components.icon
 
 @Composable
 fun CategorySelector(
@@ -28,7 +29,7 @@ fun CategorySelector(
                 onCategorySelected(category)
             }, label = { Text(category.displayName) }, leadingIcon = {
                 Icon(
-                    imageVector = category.icon, contentDescription = null
+                    imageVector = category.icon(), contentDescription = null
                 )
             })
         }

@@ -1,4 +1,4 @@
-package com.example.safespace.feature.calendar.domain.model
+package com.example.safespace.core.domain.model
 
 data class CalendarEventItem(
     val id: String,

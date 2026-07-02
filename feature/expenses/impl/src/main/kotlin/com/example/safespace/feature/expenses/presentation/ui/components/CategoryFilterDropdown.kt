@@ -17,7 +17,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.safespace.core.ui.components.ExpenseCategory
+import com.example.safespace.core.domain.model.ExpenseCategory
+import com.example.safespace.core.ui.components.icon
 
 @Composable
 fun CategoryFilterDropdown(
@@ -52,7 +53,7 @@ fun CategoryFilterDropdown(
                 DropdownMenuItem(
                     text = { Text(category.displayName) },
                     leadingIcon = {
-                        Icon(imageVector = category.icon, contentDescription = null)
+                        Icon(imageVector = category.icon(), contentDescription = null)
                     },
                     onClick = {
                         onFilterSelected(category)

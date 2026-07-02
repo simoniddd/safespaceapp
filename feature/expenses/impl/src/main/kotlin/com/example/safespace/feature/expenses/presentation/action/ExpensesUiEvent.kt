@@ -1,6 +1,6 @@
 package com.example.safespace.feature.expenses.presentation.action
 
-import com.example.safespace.core.ui.components.ExpenseCategory
+import com.example.safespace.core.domain.model.ExpenseCategory
 
 sealed interface ExpensesUiEvent {
     data class OnAmountChanged(val amount: String) : ExpensesUiEvent

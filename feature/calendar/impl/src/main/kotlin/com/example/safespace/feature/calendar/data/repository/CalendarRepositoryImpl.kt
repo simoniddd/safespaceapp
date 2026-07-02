@@ -2,8 +2,8 @@ package com.example.safespace.feature.calendar.data.repository
 
 import com.example.safespace.core.data.local.dao.CalendarDao
 import com.example.safespace.core.data.local.entity.CalendarEventEntity
-import com.example.safespace.feature.calendar.domain.model.CalendarEventItem
-import com.example.safespace.feature.calendar.domain.model.EventType
+import com.example.safespace.core.domain.model.CalendarEventItem
+import com.example.safespace.core.domain.model.EventType
 import com.example.safespace.feature.calendar.domain.repository.CalendarRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
