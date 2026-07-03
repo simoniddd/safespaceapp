@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,7 +41,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.safespace.core.domain.model.Emotion
 import com.example.safespace.core.domain.model.ExpenseCategory
+import com.example.safespace.core.ui.components.toEmoji
 import com.example.safespace.core.ui.theme.AccentRed
 import com.example.safespace.core.ui.theme.AccentYel
 import com.example.safespace.core.ui.theme.Ink
@@ -51,13 +54,14 @@ import com.example.safespace.core.ui.theme.SheetBg
 fun AddExpenseBottomSheet(
     categories: List<ExpenseCategory>,
     onDismiss: () -> Unit,
-    onSave: (amount: String, description: String, category: ExpenseCategory?) -> Unit,
+    onSave: (amount: String, description: String, category: ExpenseCategory?, emotion: Emotion?) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var amount by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<ExpenseCategory?>(null) }
+    var selectedEmotion by rememberSaveable { mutableStateOf<Emotion?>(null) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -220,6 +224,24 @@ fun AddExpenseBottomSheet(
                         )
                     }
                 }
+                Spacer(Modifier.height(10.dp))
+
+                FieldLabel("Как ощущения?")
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Emotion.entries.forEach { emotion ->
+                        EmotionChip(
+                            emotion = emotion,
+                            selected = selectedEmotion == emotion,
+                            onClick = { selectedEmotion = emotion },
+                        )
+                    }
+                }
 
                 Spacer(Modifier.height(22.dp))
 
@@ -228,7 +250,14 @@ fun AddExpenseBottomSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Ink, RoundedCornerShape(20.dp))
-                        .clickable { onSave(amount, description, selectedCategory) }
+                        .clickable {
+                            onSave(
+                                amount,
+                                description,
+                                selectedCategory,
+                                selectedEmotion
+                            )
+                        }
                         .padding(vertical = 18.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -288,7 +317,7 @@ private fun CategoryChip(
         modifier = Modifier
             .background(bg, RoundedCornerShape(20.dp))
             .border(1.dp, borderColor, RoundedCornerShape(20.dp))
-            .clickable { onClick() }
+            .clickable { onClick.invoke() }
             .padding(horizontal = 15.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -299,6 +328,30 @@ private fun CategoryChip(
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
                 fontSize = 12.sp, color = Ink,
             )
+        )
+    }
+}
+
+/** строка выбора эмодзи */
+@Composable
+private fun EmotionChip(
+    emotion: Emotion,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val bg = if (selected) AccentYel else Color.White.copy(alpha = 0.28f)
+    val borderColor = if (selected) AccentYel else Color.White.copy(alpha = 0.55f)
+
+    Box(
+        modifier = Modifier
+            .background(bg, RoundedCornerShape(20.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+            .clickable { onClick.invoke() }
+            .padding(horizontal = 15.dp, vertical = 9.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = emotion.toEmoji()
         )
     }
 }

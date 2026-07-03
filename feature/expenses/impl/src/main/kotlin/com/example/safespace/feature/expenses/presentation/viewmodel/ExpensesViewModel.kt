@@ -34,6 +34,7 @@ class ExpensesViewModel(
             is ExpensesUiEvent.OnAmountChanged -> updateState { copy(inputAmount = event.amount) }
             is ExpensesUiEvent.OnDescriptionChanged -> updateState { copy(inputDescription = event.description) }
             is ExpensesUiEvent.OnCategorySelected -> updateState { copy(selectedCategory = event.category) }
+            is ExpensesUiEvent.OnEmotionSelected -> updateState { copy(selectedEmotion = event.emotion) }
             is ExpensesUiEvent.OnAddExpenseClicked -> addExpense()
             is ExpensesUiEvent.OnDeleteExpenseClicked -> deleteExpense(event.id)
             is ExpensesUiEvent.OnToggleAddSheet -> updateState { copy(isAddSheetOpened = event.isOpen) }
@@ -48,10 +49,11 @@ class ExpensesViewModel(
         val amount = state.value.inputAmount.toDoubleOrNull() ?: return
         val description = state.value.inputDescription.ifBlank { "Без описания" }
         val category = state.value.selectedCategory.displayName
+        val emotion = state.value.selectedEmotion
 
         updateState { copy(inputAmount = "", inputDescription = "") }
         viewModelScope.launch {
-            repository.addExpense(amount, description, category)
+            repository.addExpense(amount, description, category, emotion)
         }
     }
 

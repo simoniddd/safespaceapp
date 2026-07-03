@@ -6,5 +6,6 @@ data class ExpensesItem(
     val description: String,
     val category: String,
     val dateString: String,
-    val eventId: String? = null
+    val eventId: String? = null,
+    val emotion: Emotion? = null
 )

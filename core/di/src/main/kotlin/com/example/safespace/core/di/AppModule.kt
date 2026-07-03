@@ -1,6 +1,7 @@
 package com.example.safespace.core.di
 
 import androidx.room.Room
+import androidx.room.migration.Migration
 import com.example.safespace.core.data.local.SafeSpaceDatabase
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
@@ -15,6 +16,7 @@ val appModule = module {
             "safespace_db"
         )
             .fallbackToDestructiveMigration(false)
+            .addMigrations(SafeSpaceDatabase.MIGRATION_2_3)
         .build()
     }
 

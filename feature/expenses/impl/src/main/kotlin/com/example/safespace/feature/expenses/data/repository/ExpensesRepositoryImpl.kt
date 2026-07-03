@@ -2,10 +2,12 @@ package com.example.safespace.feature.expenses.data.repository
 
 import com.example.safespace.core.data.local.dao.ExpensesDao
 import com.example.safespace.core.data.local.entity.ExpenseEntity
+import com.example.safespace.core.domain.model.Emotion
 import com.example.safespace.core.domain.model.ExpensesItem
 import com.example.safespace.feature.expenses.domain.repository.ExpensesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.koin.core.component.getScopeName
 import java.util.UUID
 
 internal class ExpensesRepositoryImpl(
@@ -21,7 +23,8 @@ internal class ExpensesRepositoryImpl(
                     description = entity.description,
                     category = entity.category,
                     dateString = entity.dateString,
-                    eventId = entity.eventId
+                    eventId = entity.eventId,
+                    emotion = entity.emotion?.let { Emotion.valueOf(it) }
                 )
             }
         }
@@ -30,7 +33,8 @@ internal class ExpensesRepositoryImpl(
     override suspend fun addExpense(
         amount: Double,
         description: String,
-        category: String
+        category: String,
+        emotion: Emotion?
     ) {
         val entity = ExpenseEntity(
             id = UUID.randomUUID().toString(),
@@ -39,7 +43,8 @@ internal class ExpensesRepositoryImpl(
             category = category,
             dateString = "Сегодня",
             timestamp = System.currentTimeMillis(),
-            eventId = null
+            eventId = null,
+            emotion = emotion?.name
         )
         expensesDao.insertExpense(entity)
     }

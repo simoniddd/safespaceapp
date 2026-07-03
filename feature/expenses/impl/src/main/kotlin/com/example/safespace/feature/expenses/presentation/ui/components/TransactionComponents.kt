@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.example.safespace.core.domain.model.ExpenseCategory
 import com.example.safespace.core.domain.model.ExpensesItem
 import com.example.safespace.core.ui.components.icon
+import com.example.safespace.core.ui.components.toEmoji
 import com.example.safespace.core.ui.theme.AppColors.CoralRed
 import com.example.safespace.core.ui.theme.AppColors.ElectricBlue
 import com.example.safespace.core.ui.theme.AppColors.PureBlack
@@ -102,6 +103,15 @@ internal fun TransactionRow(expense: ExpensesItem) {
                 color = PureBlack.copy(alpha = 0.55f),
                 fontFamily = MonoFont
             )
+            expense.emotion?.let { emotion ->
+                Text(
+                    text = emotion.toEmoji(),
+                    fontSize = 10.sp,
+                    letterSpacing = 0.5.sp,
+                    color = PureBlack.copy(alpha = 0.55f),
+                    fontFamily = MonoFont
+                )
+            }
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(

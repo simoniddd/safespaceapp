@@ -12,5 +12,6 @@ data class ExpenseEntity(
     val category: String,
     val dateString: String,
     val timestamp: Long, // для правильной сортировки времени
-    val eventId: String? = null
+    val eventId: String? = null,
+    val emotion: String? = null
 )
