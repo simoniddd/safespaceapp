@@ -1,5 +1,12 @@
 package com.example.safespace.feature.hub.presentation.ui
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.LauncherActivityInfo
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -34,12 +42,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.example.safespace.core.ui.theme.AppColors.CoralRed
 import com.example.safespace.core.ui.theme.AppColors.ElectricBlue
 import com.example.safespace.core.ui.theme.AppColors.NeonYellow
@@ -50,10 +60,32 @@ import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun HubScreen(viewModel: HubViewModel = koinViewModel()) {
+fun HubScreen(
+    viewModel: HubViewModel = koinViewModel()
+) {
     val state by viewModel.state.collectAsState()
 
+    val context = LocalContext.current
+
     val dailyLimit = 600.0
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) viewModel.loadCalendarEvents()
+    }
+
+    LaunchedEffect(Unit) {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.READ_CALENDAR
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            viewModel.loadCalendarEvents()
+        } else {
+            launcher.launch(Manifest.permission.READ_CALENDAR)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -103,7 +135,8 @@ fun HubScreen(viewModel: HubViewModel = koinViewModel()) {
             FinancialAnchorCard(
                 spent = state.dailyExpenses,
                 limit = dailyLimit,
-                onClick = viewModel::onExpensesClicked)
+                onClick = viewModel::onExpensesClicked
+            )
             Spacer(modifier = Modifier.height(14.dp))
             EcosystemWidgets()
             Spacer(modifier = Modifier.height(26.dp))
@@ -197,7 +230,7 @@ private fun FinancialAnchorCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(32.dp))
-            .clickable{ onClick() }
+            .clickable { onClick() }
             .background(Color(0xFF101010).copy(alpha = 0.58f))
             .border(1.dp, Color.White.copy(alpha = 0.13f), RoundedCornerShape(32.dp))
             .padding(horizontal = 22.dp, vertical = 24.dp)
