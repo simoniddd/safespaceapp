@@ -1,11 +1,8 @@
 package com.example.safespace.feature.hub.presentation.ui
 
 import android.Manifest
-import android.content.Context
-import android.content.pm.LauncherActivityInfo
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -32,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +50,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.safespace.core.ui.theme.AppColors.CoralRed
 import com.example.safespace.core.ui.theme.AppColors.ElectricBlue
 import com.example.safespace.core.ui.theme.AppColors.NeonYellow
@@ -67,7 +64,7 @@ import org.koin.androidx.compose.koinViewModel
 fun HubScreen(
     viewModel: HubViewModel = koinViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
 
@@ -76,7 +73,7 @@ fun HubScreen(
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) viewModel.loadCalendarEvents()
+        if (isGranted) viewModel.refresh()
     }
 
     LaunchedEffect(Unit) {
@@ -84,7 +81,7 @@ fun HubScreen(
             context, Manifest.permission.READ_CALENDAR
         ) == PackageManager.PERMISSION_GRANTED
         if (hasPermission) {
-            viewModel.loadCalendarEvents()
+            viewModel.refresh()
         } else {
             launcher.launch(Manifest.permission.READ_CALENDAR)
         }
@@ -93,7 +90,7 @@ fun HubScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if(event == Lifecycle.Event.ON_RESUME) {
+            if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.refresh()
             }
         }
@@ -686,7 +683,16 @@ private fun TimelineSection(
                                 )
                             }
 
-                            is HubTimelineItem.Event -> TODO()
+                            is HubTimelineItem.Event -> {
+                                val event = timelineItem.item
+                                TimelineItem(
+                                    dotColor = ElectricBlue,
+                                    time = event.timeString,
+                                    title = event.title,
+                                    subtitle = "${event.type.name} · ${event.durationMin} мин",
+                                    isPast = false
+                                )
+                            }
                         }
                     }
                 }

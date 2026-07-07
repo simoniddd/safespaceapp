@@ -15,7 +15,7 @@ class CalendarRepositoryImpl(
 ) : CalendarRepository {
 
     override fun getEventsForDate(date: LocalDate): Flow<List<CalendarEventItem>> {
-        return calendarDao.getEventsForDate(date).map { events ->
+        return calendarDao.getEventsForDate(date.toString()).map { events ->
             events.map { event ->
                 CalendarEventItem(
                     id = event.id,

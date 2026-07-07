@@ -11,8 +11,8 @@ import java.time.LocalDate
 @Dao
 interface CalendarDao {
 
-    @Query("SELECT * FROM calendar_events WHERE dateString = :date ORDER BY timeStamp ASC")
-    fun getEventsForDate(date: LocalDate): Flow<List<CalendarEventEntity>>
+    @Query("SELECT * FROM calendar_events WHERE dateString = :dateString ORDER BY timeStamp ASC")
+    fun getEventsForDate(dateString: String): Flow<List<CalendarEventEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addEvent(event: CalendarEventEntity)
