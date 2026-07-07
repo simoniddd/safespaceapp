@@ -33,6 +33,7 @@ class SystemCalendarSource(
             CalendarContract.Instances.TITLE,
             CalendarContract.Instances.BEGIN,
             CalendarContract.Instances.END,
+            CalendarContract.Events.CALENDAR_ID,
         )
 
         val cursor = try {
@@ -49,6 +50,7 @@ class SystemCalendarSource(
                 val title = it.getString(1)
                 val begin = it.getLong(2)
                 val end = it.getLong(3)
+                val calendarId = it.getLong(4)
                 val durationMin = ((end - begin) / 60_000).toInt()
                 val timeString = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(begin))
                 val dateString = ""
@@ -61,6 +63,7 @@ class SystemCalendarSource(
                         timeStamp = begin,
                         dateString = dateString,
                         timeString = timeString,
+                        calendarId = calendarId,
                         durationMin = durationMin,
                         type = type,
                     )

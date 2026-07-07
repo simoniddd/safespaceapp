@@ -16,6 +16,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.datastore.preferences)
     implementation(projects.feature.calendar.api)
     implementation(projects.core.ui)
     implementation(projects.core.data)

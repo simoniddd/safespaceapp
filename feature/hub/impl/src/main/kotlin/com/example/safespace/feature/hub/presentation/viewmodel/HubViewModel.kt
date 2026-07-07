@@ -5,6 +5,7 @@ import com.example.safespace.core.domain.model.CalendarEventItem
 import com.example.safespace.core.domain.source.EventsSource
 import com.example.safespace.core.presentation.StatefulViewModel
 import com.example.safespace.core.presentation.navigation.Navigator
+import com.example.safespace.feature.calendar.domain.source.CalendarSource
 import com.example.safespace.feature.calendar.navigation.CalendarEntryPoint
 import com.example.safespace.feature.expenses.domain.repository.ExpensesRepository
 import com.example.safespace.feature.expenses.navigation.ExpensesEntryPoint
@@ -26,6 +27,7 @@ class HubViewModel(
     private val expensesEntryPoint: ExpensesEntryPoint,
     private val calendarEntryPoint: CalendarEntryPoint,
     private val eventsSource: EventsSource,
+    private val calendarSource: CalendarSource,
     navigator: Navigator
 ) : StatefulViewModel<HubState>(HubState(), navigator) {
 
@@ -45,12 +47,15 @@ class HubViewModel(
 
     val uiState: StateFlow<HubState> = combine(
         expensesRepository.getAllExpenses(),
-        systemEventsFlow
-    ) { expenses, events ->
+        systemEventsFlow,
+        calendarSource.enabledCalendarIds
+    ) { expenses, events, calendarIds ->
+        val filteredEvents = if (calendarIds.isEmpty()) events
+        else events.filter { it.calendarId == 0L || it.calendarId in calendarIds }
         HubState(
             isLoading = false,
             dailyExpenses = expenses.sumOf { it.amount },
-            timelineItems = buildTimeLine(expenses, events)
+            timelineItems = buildTimeLine(expenses, filteredEvents)
         )
     }.stateIn(
         scope = viewModelScope,

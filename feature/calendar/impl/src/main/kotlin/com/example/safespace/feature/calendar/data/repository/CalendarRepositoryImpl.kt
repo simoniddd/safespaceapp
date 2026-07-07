@@ -24,6 +24,7 @@ class CalendarRepositoryImpl(
                     dateString = event.dateString,
                     timeString = event.timeString,
                     durationMin = event.durationMin,
+                    calendarId = 0L,
                     type = EventType.valueOf(event.type)
                 )
             }
