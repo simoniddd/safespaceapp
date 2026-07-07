@@ -7,14 +7,15 @@ import com.example.safespace.core.domain.model.EventType
 import com.example.safespace.feature.calendar.domain.repository.CalendarRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.LocalDate
 import java.util.UUID
 
 class CalendarRepositoryImpl(
     private val calendarDao: CalendarDao
 ) : CalendarRepository {
 
-    override fun getEventsForDate(dateString: String): Flow<List<CalendarEventItem>> {
-        return calendarDao.getEventsForDate(dateString).map { events ->
+    override fun getEventsForDate(date: LocalDate): Flow<List<CalendarEventItem>> {
+        return calendarDao.getEventsForDate(date).map { events ->
             events.map { event ->
                 CalendarEventItem(
                     id = event.id,

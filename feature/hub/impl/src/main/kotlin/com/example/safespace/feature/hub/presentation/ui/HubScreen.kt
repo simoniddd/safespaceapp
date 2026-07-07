@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -50,6 +51,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.safespace.core.ui.theme.AppColors.CoralRed
 import com.example.safespace.core.ui.theme.AppColors.ElectricBlue
 import com.example.safespace.core.ui.theme.AppColors.NeonYellow
@@ -79,12 +83,22 @@ fun HubScreen(
         val hasPermission = ContextCompat.checkSelfPermission(
             context, Manifest.permission.READ_CALENDAR
         ) == PackageManager.PERMISSION_GRANTED
-
         if (hasPermission) {
             viewModel.loadCalendarEvents()
         } else {
             launcher.launch(Manifest.permission.READ_CALENDAR)
         }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if(event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Box(

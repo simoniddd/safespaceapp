@@ -12,7 +12,6 @@ val hubModule = module {
         get(),
         get(),
         get(),
-        calendarEntryPoint = get(),
         eventsSource = get(),
         navigator = get()
     ) }
