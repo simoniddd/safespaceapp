@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.example.safespace.core.presentation.navigation.NavCommand
 import com.example.safespace.core.presentation.navigation.Navigator
+import com.example.safespace.feature.calendar.presentation.navigation.calendarGraph
 import com.example.safespace.feature.expenses.presentation.navigation.expensesGraph
 import com.example.safespace.feature.hub.navigation.HubEntryPoint
 import com.example.safespace.feature.hub.presentation.navigation.hubGraph
@@ -34,5 +35,6 @@ fun AppNavigation(modifier: Modifier = Modifier) {
     ) {
         expensesGraph(navController)
         hubGraph(navController)
+        calendarGraph(navController)
     }
 }

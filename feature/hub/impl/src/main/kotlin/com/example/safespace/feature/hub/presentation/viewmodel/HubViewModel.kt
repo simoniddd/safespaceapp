@@ -48,10 +48,10 @@ class HubViewModel(
     val uiState: StateFlow<HubState> = combine(
         expensesRepository.getAllExpenses(),
         systemEventsFlow,
-        calendarSource.enabledCalendarIds
+        calendarSource.hiddenCalendarIds
     ) { expenses, events, calendarIds ->
         val filteredEvents = if (calendarIds.isEmpty()) events
-        else events.filter { it.calendarId == 0L || it.calendarId in calendarIds }
+        else events.filter { it.calendarId !in calendarIds  }
         HubState(
             isLoading = false,
             dailyExpenses = expenses.sumOf { it.amount },

@@ -28,6 +28,6 @@ val calendarModule = module {
     }
     single<CalendarSource> { get<CalendarPreferencesDataStore>() }
     single { CalendarPreferencesDataStore(get()) }
-    single<SystemCalendarsSource> { get() }
+    single{ SystemCalendarsSource(androidContext()) }
     viewModel { CalendarSettingViewmodel(get(), get(), get()) }
 }

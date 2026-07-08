@@ -141,7 +141,7 @@ fun HubScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(start = 18.dp, end = 18.dp, bottom = 48.dp)
         ) {
-            HubHeader(userName = "Alex")
+            HubHeader(userName = "Alex", viewModel::onCalendarClicked)
             Spacer(modifier = Modifier.height(20.dp))
             FinancialAnchorCard(
                 spent = state.dailyExpenses,
@@ -158,7 +158,8 @@ fun HubScreen(
 
 @Composable
 private fun HubHeader(
-    userName: String
+    userName: String,
+    onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -207,6 +208,7 @@ private fun HubHeader(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
+                    .clickable {onClick()}
                     .background(Color(0xFF121212).copy(alpha = 0.9f)),
                 contentAlignment = Alignment.Center
             ) {
