@@ -15,12 +15,12 @@ class CalendarPreferencesDataStore(
         private val ENABLED_CALENDAR_IDS = stringSetPreferencesKey("enabled_calendar_ids")
     }
 
-    override val enabledCalendarIds: Flow<Set<Long>>
+    override val hiddenCalendarIds: Flow<Set<Long>>
         get() = dataStore.data.map { prefs ->
             prefs[ENABLED_CALENDAR_IDS]?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
         }
 
-    override suspend fun setEnabledCalendarIds(ids: Set<Long>) {
+    override suspend fun setHiddenCalendarIds(ids: Set<Long>) {
         dataStore.edit { prefs ->
             prefs[ENABLED_CALENDAR_IDS] = ids.map { it.toString() }.toSet()
         }

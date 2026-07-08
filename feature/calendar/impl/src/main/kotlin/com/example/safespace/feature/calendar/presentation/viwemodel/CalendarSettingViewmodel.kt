@@ -1,5 +1,6 @@
 package com.example.safespace.feature.calendar.presentation.viwemodel
 
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.example.safespace.core.presentation.StatefulViewModel
 import com.example.safespace.core.presentation.navigation.Navigator
@@ -22,8 +23,8 @@ class CalendarSettingViewmodel(
     init {
         loadCalendars()
         viewModelScope.launch {
-            calendarIds.enabledCalendarIds.collect { ids ->
-                updateState { copy(enabledCalendarIds = ids) }
+            calendarIds.hiddenCalendarIds.collect { ids ->
+                updateState { copy(hiddenCalendarIds = ids) }
             }
         }
     }
@@ -43,18 +44,19 @@ class CalendarSettingViewmodel(
         val calendarsUpdated = calendars.getCalendars()
         updateState {
             copy(
-                calendarList = calendarsUpdated
+                calendarList = calendarsUpdated,
+                isLoaded = true
             )
         }
     }
 
     private fun addCalendarId(selectedId: Long) {
-        val currentIds = state.value.enabledCalendarIds
+        val currentIds = state.value.hiddenCalendarIds
         val newIds =
             if (selectedId in currentIds) currentIds - selectedId else currentIds + selectedId
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                calendarIds.setEnabledCalendarIds(newIds)
+                calendarIds.setHiddenCalendarIds(newIds)
             }
         }
     }
