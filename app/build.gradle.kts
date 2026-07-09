@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.room.ktx)
 
     // Core
+    implementation(projects.core.data)
     implementation(projects.core.di)
     implementation(projects.core.presentation)
     implementation(projects.core.ui)
@@ -66,6 +67,7 @@ dependencies {
     // KOIN
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
+    implementation(libs.koin.androidx.workmanager)
 
     // Навигация и Сериализация
     implementation(libs.navigation.compose)

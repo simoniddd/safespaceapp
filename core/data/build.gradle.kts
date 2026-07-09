@@ -18,7 +18,15 @@ android {
 }
 
 dependencies {
+    implementation(projects.core.domain)
+    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+
+    // Koin для WorkManager
+    implementation(libs.koin.androidx.workmanager)
+
+    // Сам AndroidX WorkManager
+    implementation(libs.androidx.workmanager)
     ksp(libs.room.compiler)
 }
