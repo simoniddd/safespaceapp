@@ -51,12 +51,16 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.safespace.core.domain.state.IntentionState
+import com.example.safespace.core.ui.components.QuestionAction
+import com.example.safespace.core.ui.components.QuestionCard
 import com.example.safespace.core.ui.theme.AppColors.CoralRed
 import com.example.safespace.core.ui.theme.AppColors.ElectricBlue
 import com.example.safespace.core.ui.theme.AppColors.NeonYellow
 import com.example.safespace.core.ui.theme.AppColors.PureBlack
 import com.example.safespace.core.ui.theme.AppColors.SandBackground
 import com.example.safespace.feature.hub.presentation.state.HubTimelineItem
+import com.example.safespace.feature.hub.presentation.state.PendingQuestion
 import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
 import org.koin.androidx.compose.koinViewModel
 
@@ -151,7 +155,23 @@ fun HubScreen(
             Spacer(modifier = Modifier.height(14.dp))
             EcosystemWidgets()
             Spacer(modifier = Modifier.height(26.dp))
-            TimelineSection(state.timelineItems)
+            val q = state.pendingQuestion
+            if (q is PendingQuestion.IntentionCheck) {
+                QuestionCard(
+                    question = "«${q.eventTitle}» состоялась?",
+                    actions = listOf(
+                        QuestionAction("Да ✓") { viewModel.confirmIntention(q.eventId, q.instanceStart) },
+                        QuestionAction("Не сегодня") { viewModel.skipIntention(q.eventId, q.instanceStart) },
+                    ),
+                    quietAction = QuestionAction("позже") { viewModel.postponeIntention(q.eventId, q.instanceStart) },
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+            TimelineSection(
+                items = state.timelineItems,
+                doneCountByEventId = state.doneCountByEventId,
+                onMarkIntention = viewModel::markEventAsIntention,
+            )
         }
     }
 }
@@ -620,7 +640,9 @@ private fun GlassWidgetCard(
 
 @Composable
 private fun TimelineSection(
-    items: List<HubTimelineItem>
+    items: List<HubTimelineItem>,
+    doneCountByEventId: Map<String, Int>,
+    onMarkIntention: (eventId: String, instanceStart: Long, durationMin: Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -687,12 +709,15 @@ private fun TimelineSection(
 
                             is HubTimelineItem.Event -> {
                                 val event = timelineItem.item
-                                TimelineItem(
-                                    dotColor = ElectricBlue,
+                                EventTimelineItem(
                                     time = event.timeString,
                                     title = event.title,
                                     subtitle = "${event.type.name} · ${event.durationMin} мин",
-                                    isPast = false
+                                    intentionState = event.intentionState,
+                                    doneCount = doneCountByEventId[event.id] ?: 0,
+                                    onMarkIntention = {
+                                        onMarkIntention(event.id, event.timeStamp, event.durationMin)
+                                    },
                                 )
                             }
                         }
@@ -749,6 +774,85 @@ private fun TimelineItem(
             fontWeight = FontWeight.Bold,
             color = PureBlack.copy(alpha = 0.6f),
             fontFamily = FontFamily.Monospace
+        )
+    }
+}
+
+@Composable
+private fun EventTimelineItem(
+    time: String,
+    title: String,
+    subtitle: String,
+    intentionState: IntentionState?,
+    doneCount: Int,
+    onMarkIntention: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(13.dp)
+                .clip(CircleShape)
+                .background(ElectricBlue)
+                .padding(top = 3.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = PureBlack,
+                    fontFamily = FontFamily.Monospace,
+                )
+                when (intentionState) {
+                    IntentionState.DONE -> Text(
+                        text = if (doneCount > 1) "✓ $doneCount раза" else "✓",
+                        fontSize = 10.sp,
+                        color = NeonYellow.copy(alpha = 0.85f),
+                        fontFamily = FontFamily.Monospace,
+                    )
+                    IntentionState.UPCOMING -> Text(
+                        text = "🎯",
+                        fontSize = 10.sp,
+                    )
+                    else -> Unit
+                }
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                fontSize = 10.sp,
+                letterSpacing = 1.sp,
+                color = PureBlack.copy(alpha = 0.42f),
+                fontFamily = FontFamily.Monospace,
+            )
+        }
+        if (intentionState == null) {
+            Text(
+                text = "🎯",
+                fontSize = 16.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onMarkIntention)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = time,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = PureBlack.copy(alpha = 0.6f),
+            fontFamily = FontFamily.Monospace,
         )
     }
 }

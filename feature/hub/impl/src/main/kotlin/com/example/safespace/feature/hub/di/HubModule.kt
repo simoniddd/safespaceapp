@@ -8,12 +8,16 @@ import org.koin.dsl.module
 
 val hubModule = module {
     single<HubEntryPoint> { HubEntryPointImpl() }
-    viewModel { HubViewModel(
-        get(),
-        get(),
-        get(),
-        eventsSource = get(),
-        calendarSource = get(),
-        navigator = get()
-    ) }
+    viewModel {
+        HubViewModel(
+            get(),
+            get(),
+            get(),
+            eventsSource = get(),
+            calendarSource = get(),
+            intentionRepository = get(),
+            intentionScheduler = get(),
+            navigator = get(),
+        )
+    }
 }

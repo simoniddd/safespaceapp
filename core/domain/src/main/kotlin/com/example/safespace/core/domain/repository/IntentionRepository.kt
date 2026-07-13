@@ -8,6 +8,9 @@ interface IntentionRepository {
     //для ленты - реагирует когда ответил на карточку -> лента обновилась
     fun observeIntentions(): Flow<Map<String, IntentionState>>
 
+    // сколько раз пользователь подтвердил каждое повторяющееся событие
+    fun observeDoneCountByEventId(): Flow<Map<String, Int>>
+
     //для экрана деталей - пометить событие как намерение
     suspend fun markEventAsIntention(eventId: String)
 

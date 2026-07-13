@@ -19,7 +19,8 @@ class FakeExpensesRepository: ExpensesRepository {
     override suspend fun addExpense(
         amount: Double,
         description: String,
-        category: String
+        category: String,
+        emotion: com.example.safespace.core.domain.model.Emotion?,
     ) = Unit
 
     override suspend fun deleteExpense(id: String) = Unit

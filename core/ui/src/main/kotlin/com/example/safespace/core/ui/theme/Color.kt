@@ -85,4 +85,15 @@ object AppColors {
     val BackgroundCalendar = Color(0xFF141414)
     val CornerRadius = 14.dp
 
+
+    // QuestionCard
+    val CardOutline = Color.White.copy(alpha = 0.10f)
+    val CardButtonGlass = Color.White.copy(alpha = 0.07f)
+    val CardButtonOutline = Color.White.copy(alpha = 0.08f)
+    val CardCaption = Color.White.copy(alpha = 0.35f)
+    val CardButtonText = Color.White.copy(alpha = 0.75f)
+    val CardQuietText = Color.White.copy(alpha = 0.38f)
+    val CardCorner = 16.dp
+    val CardButtonCorner = 12.dp
+
 }

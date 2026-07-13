@@ -8,8 +8,11 @@ import com.example.safespace.core.domain.model.EventType
 import com.example.safespace.core.domain.model.ExpensesItem
 import com.example.safespace.feature.calendar.navigation.CalendarEntryPoint
 import com.example.safespace.feature.expenses.navigation.ExpensesEntryPoint
-import com.example.safespace.feature.hub.fake.FakeCalendarRepository
+import com.example.safespace.feature.hub.fake.FakeCalendarSource
+import com.example.safespace.feature.hub.fake.FakeEventsSource
 import com.example.safespace.feature.hub.fake.FakeExpensesRepository
+import com.example.safespace.feature.hub.fake.FakeIntentionRepository
+import com.example.safespace.feature.hub.fake.FakeIntentionScheduler
 import com.example.safespace.feature.hub.fake.FakeNavigator
 import com.example.safespace.feature.hub.presentation.state.HubTimelineItem
 import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
@@ -27,7 +30,8 @@ import org.junit.Test
 class HubViewModelTest {
 
     private val fakeExpenseRepo = FakeExpensesRepository()
-    private val fakeCalendarRepo = FakeCalendarRepository()
+    private val fakeEventsSource = FakeEventsSource()
+    private val fakeCalendarSource = FakeCalendarSource()
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private val fakeExpensesEntryPoint = object : ExpensesEntryPoint {
@@ -50,19 +54,20 @@ class HubViewModelTest {
 
     private fun createViewModel() = HubViewModel(
         expensesRepository = fakeExpenseRepo,
-        calendarRepository = fakeCalendarRepo,
         expensesEntryPoint = fakeExpensesEntryPoint,
         calendarEntryPoint = fakeCalendarEntryPoint,
-        navigator = FakeNavigator()
+        eventsSource = fakeEventsSource,
+        calendarSource = fakeCalendarSource,
+        intentionRepository = FakeIntentionRepository(),
+        intentionScheduler = FakeIntentionScheduler(),
+        navigator = FakeNavigator(),
     )
-
-    // Когда оба репозитория пустые → timelineItems пуст, dailyExpenses = 0.0, isLoading = false
 
     @Test
     fun `начальный стейт — пустые репозитории → пустой таймлайн`() = runTest {
         val vm = createViewModel()
 
-        vm.state.test {
+        vm.uiState.test {
             val state = awaitItem()
 
             assertEquals(false, state.isLoading)
@@ -83,7 +88,7 @@ class HubViewModelTest {
             eventId = "TODO()"
         )
 
-        vm.state.test {
+        vm.uiState.test {
             awaitItem()
             fakeExpenseRepo.emit(listOf(someExpense))
             val updatedState = awaitItem()
@@ -94,12 +99,8 @@ class HubViewModelTest {
         }
     }
 
-    /*
-    оба репозитория выдают данные, и расходы и события смешаны и отсортированы.
-    По аналогии с тестом 3 в BuildTimelineUseCaseTest — но теперь через ViewModel целиком.
-     */
     @Test
-    fun `оба репозитория выдают данные, и расходы и события смешаны и отсортированы`() = runTest {
+    fun `оба источника выдают данные — расходы и события смешаны и отсортированы`() = runTest {
         val vm = createViewModel()
         val someExpense1 = ExpensesItem(
             "1",
@@ -118,36 +119,36 @@ class HubViewModelTest {
             eventId = "TODO()"
         )
         val someEventA = CalendarEventItem(
-            "2",
+            id = "2",
             title = "",
             timeStamp = 124125125,
             dateString = "TODO()",
             timeString = "TODO()",
+            calendarId = 0L,
             durationMin = 90,
             type = EventType.ENTERTAINMENT,
         )
         val someEventB = CalendarEventItem(
-            "4",
+            id = "4",
             title = "",
             timeStamp = 124125125,
             dateString = "TODO()",
             timeString = "TODO()",
+            calendarId = 0L,
             durationMin = 100,
             type = EventType.ENTERTAINMENT,
         )
 
-        val expenses = listOf(someExpense1, someExpense2)
-        val events = listOf(someEventA, someEventB)
+        fakeEventsSource.setEvents(listOf(someEventA, someEventB))
 
-        vm.state.test {
-            awaitItem()
-            fakeExpenseRepo.emit(expenses)
-            awaitItem()
-            fakeCalendarRepo.emit(events)
+        vm.uiState.test {
+            awaitItem() // пустое начальное состояние после refresh()
+            fakeExpenseRepo.emit(listOf(someExpense1, someExpense2))
             val updatedState = awaitItem()
 
             assertEquals(320.0, updatedState.dailyExpenses)
             assertEquals(4, updatedState.timelineItems.size)
+            cancelAndIgnoreRemainingEvents()
         }
     }
 }

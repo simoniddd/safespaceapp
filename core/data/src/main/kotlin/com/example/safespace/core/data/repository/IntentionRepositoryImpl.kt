@@ -9,6 +9,7 @@ import com.example.safespace.core.domain.state.IntentionStatus
 import com.example.safespace.core.domain.state.toIntentionState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 
 internal class IntentionRepositoryImpl(
     private val intentionDao: IntentionDao
@@ -33,6 +34,15 @@ internal class IntentionRepositoryImpl(
         }
     }
 
+
+    override fun observeDoneCountByEventId(): Flow<Map<String, Int>> {
+        return intentionDao.observeAllConfirmations().map { confirmations ->
+            confirmations
+                .filter { it.status == IntentionStatus.Done.name }
+                .groupingBy { it.eventId }
+                .eachCount()
+        }
+    }
 
     override suspend fun markEventAsIntention(eventId: String) {
         val entity = IntentionTagEntity(

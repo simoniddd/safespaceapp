@@ -72,6 +72,7 @@ class BuildTimelineUseCaseTest {
             timeStamp = 1241255,
             dateString = "",
             timeString = "09:00",
+            calendarId = 0L,
             durationMin = 30,
             type = EventType.ENTERTAINMENT,
         )
