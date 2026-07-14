@@ -5,7 +5,7 @@ import com.example.safespace.core.domain.model.EventType
 import com.example.safespace.feature.calendar.domain.repository.CalendarRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 class FakeCalendarRepository : CalendarRepository {
 

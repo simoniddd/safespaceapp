@@ -2,7 +2,9 @@ package com.example.safespace.feature.hub.presentation.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.example.safespace.core.domain.model.CalendarEventItem
+import com.example.safespace.core.domain.model.WeatherIcon
 import com.example.safespace.core.domain.repository.IntentionRepository
+import com.example.safespace.core.domain.repository.WeatherRepository
 import com.example.safespace.core.domain.source.EventsSource
 import com.example.safespace.core.domain.state.IntentionState
 import com.example.safespace.core.domain.worker.IntentionScheduler
@@ -25,7 +27,10 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 class HubViewModel(
     private val expensesRepository: ExpensesRepository,
@@ -35,20 +40,27 @@ class HubViewModel(
     private val calendarSource: CalendarSource,
     private val intentionRepository: IntentionRepository,
     private val intentionScheduler: IntentionScheduler,
+
+    private val weatherRepository: WeatherRepository,
     navigator: Navigator,
 ) : StatefulViewModel<HubState>(HubState(), navigator) {
 
     private val _refreshTrigger = MutableSharedFlow<Unit>(replay = 1)
     private val buildTimeLine = BuildTimelineUseCase()
 
-    @OptIn(ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
     private val systemEventsFlow: Flow<List<CalendarEventItem>> =
         _refreshTrigger.flatMapLatest {
-            flow { emit(eventsSource.getEventsForDate(LocalDate.now())) }
+            flow { emit(eventsSource.getEventsForDate(Clock.System.todayIn(TimeZone.currentSystemDefault()))) }
         }
 
-    val uiState: StateFlow<HubState> = combine(
+    private val expensesWithWeather = combine(
         expensesRepository.getAllExpenses(),
+        weatherRepository.observeToday()
+    ) { expenses, weather -> expenses to weather }
+
+    val uiState: StateFlow<HubState> = combine(
+        expensesWithWeather,
         systemEventsFlow,
         calendarSource.hiddenCalendarIds,
         intentionRepository.observeIntentions(),
@@ -61,12 +73,13 @@ class HubViewModel(
             event.copy(intentionState = intentions[event.id])
         }
 
-        val pendingEvent = eventsWithState.firstOrNull { it.intentionState == IntentionState.PENDING }
+        val pendingEvent =
+            eventsWithState.firstOrNull { it.intentionState == IntentionState.PENDING }
 
         HubState(
             isLoading = false,
-            dailyExpenses = expenses.sumOf { it.amount },
-            timelineItems = buildTimeLine(expenses, eventsWithState),
+            dailyExpenses = expenses.first.sumOf { it.amount },
+            timelineItems = buildTimeLine(expenses.first, eventsWithState),
             pendingQuestion = pendingEvent?.let {
                 PendingQuestion.IntentionCheck(
                     eventId = it.id,
@@ -75,6 +88,7 @@ class HubViewModel(
                 )
             },
             doneCountByEventId = doneCounts,
+            todayIcon = expenses.second
         )
     }.stateIn(
         scope = viewModelScope,
@@ -128,6 +142,13 @@ class HubViewModel(
                 delayMillis = 60 * 60_000L,
             )
             intentionRepository.updateStatus(eventId, instanceStart, IntentionState.UPCOMING)
+        }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    fun saveWeather(icon: WeatherIcon) {
+        viewModelScope.launch {
+            weatherRepository.saveWeather(Clock.System.todayIn(TimeZone.currentSystemDefault()), icon)
         }
     }
 }

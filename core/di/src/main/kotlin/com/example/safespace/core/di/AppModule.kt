@@ -16,8 +16,8 @@ val appModule = module {
             "safespace_db"
         )
             .fallbackToDestructiveMigration(false)
-            .addMigrations(SafeSpaceDatabase.MIGRATION_3_4, SafeSpaceDatabase.MIGRATION_3_4)
-        .build()
+            .addMigrations(SafeSpaceDatabase.MIGRATION_4_5)
+            .build()
     }
 
     single {
@@ -28,5 +28,8 @@ val appModule = module {
     }
     single {
         get<SafeSpaceDatabase>().intentionDao
+    }
+    single {
+        get<SafeSpaceDatabase>().weatherDao
     }
 }

@@ -19,6 +19,7 @@ android {
 
 dependencies {
     implementation(projects.core.domain)
+    implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

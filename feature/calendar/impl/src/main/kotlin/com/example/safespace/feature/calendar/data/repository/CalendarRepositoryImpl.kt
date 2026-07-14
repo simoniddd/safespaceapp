@@ -7,7 +7,7 @@ import com.example.safespace.core.domain.model.EventType
 import com.example.safespace.feature.calendar.domain.repository.CalendarRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 import java.util.UUID
 
 class CalendarRepositoryImpl(

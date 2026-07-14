@@ -3,7 +3,7 @@ package com.example.safespace.feature.calendar.domain.repository
 import com.example.safespace.core.domain.model.CalendarEventItem
 import com.example.safespace.core.domain.model.EventType
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 interface CalendarRepository {
     // для реактивного обновления UI

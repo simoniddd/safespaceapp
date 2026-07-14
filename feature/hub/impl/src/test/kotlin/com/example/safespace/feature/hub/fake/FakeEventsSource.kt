@@ -2,7 +2,7 @@ package com.example.safespace.feature.hub.fake
 
 import com.example.safespace.core.domain.model.CalendarEventItem
 import com.example.safespace.core.domain.source.EventsSource
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 class FakeEventsSource : EventsSource {
 

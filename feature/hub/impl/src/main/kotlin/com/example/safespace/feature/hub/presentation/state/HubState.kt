@@ -2,6 +2,7 @@ package com.example.safespace.feature.hub.presentation.state
 
 import com.example.safespace.core.domain.model.CalendarEventItem
 import com.example.safespace.core.domain.model.ExpensesItem
+import com.example.safespace.core.domain.model.WeatherIcon
 
 sealed interface HubTimelineItem {
     val id: String
@@ -31,6 +32,7 @@ data class HubState(
     val dailyExpenses: Double = 0.0,
     val upcomingEventsCount: Int = 0,
     val userName: String = "User",
+    val todayIcon: WeatherIcon? = null,
     val timelineItems: List<HubTimelineItem> = emptyList(),
     val pendingQuestion: PendingQuestion? = null,
     val doneCountByEventId: Map<String, Int> = emptyMap(),
