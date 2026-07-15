@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,9 +29,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -51,6 +52,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.safespace.core.domain.model.WeatherIcon
 import com.example.safespace.core.domain.state.IntentionState
 import com.example.safespace.core.ui.components.QuestionAction
 import com.example.safespace.core.ui.components.QuestionCard
@@ -105,72 +107,70 @@ fun HubScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(SandBackground)
+            .background(PureBlack)
     ) {
         // --- 1. AMBIENT GLOWS (Световые пятна на фоне) ---
-        Box(
-            modifier = Modifier
-                .offset(x = (-60).dp, y = 140.dp)
-                .size(340.dp, 280.dp)
-                .blur(88.dp)
-                .background(NeonYellow.copy(alpha = 0.5f), CircleShape)
-        )
-        Box(
-            modifier = Modifier
-                .offset(x = 200.dp, y = 380.dp)
-                .size(280.dp)
-                .blur(95.dp)
-                .background(ElectricBlue.copy(alpha = 0.35f), CircleShape)
-        )
-        Box(
-            modifier = Modifier
-                .offset(x = (-70).dp, y = 560.dp)
-                .size(280.dp)
-                .blur(100.dp)
-                .background(CoralRed.copy(alpha = 0.35f), CircleShape)
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 50.dp, y = 40.dp)
-                .size(260.dp)
-                .blur(90.dp)
-                .background(NeonYellow.copy(alpha = 0.22f), CircleShape)
-        )
 
         // --- 2. КОНТЕНТ (Поверх стекла) ---
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(start = 18.dp, end = 18.dp, bottom = 48.dp)
-        ) {
-            HubHeader(userName = "Alex", viewModel::onCalendarClicked)
-            Spacer(modifier = Modifier.height(20.dp))
-            FinancialAnchorCard(
-                spent = state.dailyExpenses,
-                limit = dailyLimit,
-                onClick = viewModel::onExpensesClicked
-            )
-            Spacer(modifier = Modifier.height(14.dp))
-            EcosystemWidgets()
-            Spacer(modifier = Modifier.height(26.dp))
-            val q = state.pendingQuestion
-            if (q is PendingQuestion.IntentionCheck) {
-                QuestionCard(
-                    question = "«${q.eventTitle}» состоялась?",
-                    actions = listOf(
-                        QuestionAction("Да ✓") { viewModel.confirmIntention(q.eventId, q.instanceStart) },
-                        QuestionAction("Не сегодня") { viewModel.skipIntention(q.eventId, q.instanceStart) },
-                    ),
-                    quietAction = QuestionAction("позже") { viewModel.postponeIntention(q.eventId, q.instanceStart) },
+        Box(modifier = Modifier.fillMaxSize()) {
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 18.dp, end = 18.dp, bottom = 48.dp)
+            ) {
+                HubHeader(
+                    userName = "Alex",
+                    todayIcon = state.todayIcon,
+                    onCalendarClick = { viewModel.onCalendarClicked() },
+                    onWeatherPick = { viewModel.saveWeather(it) },
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                FinancialAnchorCard(
+                    spent = state.dailyExpenses,
+                    limit = dailyLimit,
+                    onClick = viewModel::onExpensesClicked
                 )
                 Spacer(modifier = Modifier.height(14.dp))
+                EcosystemWidgets()
+                Spacer(modifier = Modifier.height(26.dp))
+                val q = state.pendingQuestion
+                if (q is PendingQuestion.IntentionCheck) {
+                    QuestionCard(
+                        question = "«${q.eventTitle}» состоялась?",
+                        actions = listOf(
+                            QuestionAction("Да ✓") {
+                                viewModel.confirmIntention(
+                                    q.eventId,
+                                    q.instanceStart
+                                )
+                            },
+                            QuestionAction("Не сегодня") {
+                                viewModel.skipIntention(
+                                    q.eventId,
+                                    q.instanceStart
+                                )
+                            },
+                        ),
+                        quietAction = QuestionAction("позже") {
+                            viewModel.postponeIntention(
+                                q.eventId,
+                                q.instanceStart
+                            )
+                        },
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+                TimelineSection(
+                    items = state.timelineItems,
+                    doneCountByEventId = state.doneCountByEventId,
+                    onMarkIntention = viewModel::markEventAsIntention,
+                )
             }
-            TimelineSection(
-                items = state.timelineItems,
-                doneCountByEventId = state.doneCountByEventId,
-                onMarkIntention = viewModel::markEventAsIntention,
+            LiveGlassOverlay(
+                weather = state.todayIcon,
+                modifier = Modifier.matchParentSize()
             )
         }
     }
@@ -179,8 +179,12 @@ fun HubScreen(
 @Composable
 private fun HubHeader(
     userName: String,
-    onClick: () -> Unit
+    todayIcon: WeatherIcon?,
+    onCalendarClick: () -> Unit,
+    onWeatherPick: (WeatherIcon) -> Unit
 ) {
+    var fanExpanded by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -207,38 +211,16 @@ private fun HubHeader(
             horizontalArrangement = Arrangement.spacedBy(9.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Время
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color.White.copy(alpha = 0.32f))
-                    .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                    .padding(horizontal = 11.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = "17:00 ◆",
-                    fontSize = 10.sp,
-                    letterSpacing = 1.sp,
-                    color = PureBlack.copy(alpha = 0.8f),
-                    fontFamily = FontFamily.Monospace
-                )
-            }
-            // Аватар
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .clickable {onClick()}
-                    .background(Color(0xFF121212).copy(alpha = 0.9f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = userName,
-                    color = NeonYellow,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            WeatherFan(
+                expanded = fanExpanded,
+                selected = todayIcon,
+                onPick = { onWeatherPick(it); fanExpanded = false },
+            )
+            DayHeaderWeatherIcon(
+                weather = todayIcon,
+                isToday = true,
+                onClick = { fanExpanded = !fanExpanded },
+            )
         }
     }
 }
@@ -716,7 +698,11 @@ private fun TimelineSection(
                                     intentionState = event.intentionState,
                                     doneCount = doneCountByEventId[event.id] ?: 0,
                                     onMarkIntention = {
-                                        onMarkIntention(event.id, event.timeStamp, event.durationMin)
+                                        onMarkIntention(
+                                            event.id,
+                                            event.timeStamp,
+                                            event.durationMin
+                                        )
                                     },
                                 )
                             }
@@ -820,10 +806,12 @@ private fun EventTimelineItem(
                         color = NeonYellow.copy(alpha = 0.85f),
                         fontFamily = FontFamily.Monospace,
                     )
+
                     IntentionState.UPCOMING -> Text(
                         text = "🎯",
                         fontSize = 10.sp,
                     )
+
                     else -> Unit
                 }
             }

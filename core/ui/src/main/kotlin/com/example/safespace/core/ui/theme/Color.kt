@@ -2,6 +2,7 @@ package com.example.safespace.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * Цветовая палитра приложения SafeSpace.
@@ -95,5 +96,16 @@ object AppColors {
     val CardQuietText = Color.White.copy(alpha = 0.38f)
     val CardCorner = 16.dp
     val CardButtonCorner = 12.dp
+
+    val IconAlpha = 0.75f
+    val GhostStroke = Color.White.copy(alpha = 0.28f)
+    val FanGlass = Color.White.copy(alpha = 0.07f)
+    val FanSelected = Color.White.copy(alpha = 0.12f)
+    val HeaderIconBg = Color.White.copy(alpha = 0.05f)
+    val TapTarget = 28.dp
+    val IconGlyph = 24.sp
+    val HeaderIcon = 40.dp
+    val RainDrop = Color.White.copy(alpha = 0.28f)
+    val SunGlint = Color(0xFFF6EA00)
 
 }
