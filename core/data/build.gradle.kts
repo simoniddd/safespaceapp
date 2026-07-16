@@ -23,6 +23,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.health.connect)
 
     // Koin для WorkManager
     implementation(libs.koin.androidx.workmanager)

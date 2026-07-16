@@ -23,6 +23,7 @@ foundationLayout = "1.11.3"
 datastore = "1.1.1"
 datastoreCore = "1.2.1"
 kotlinxDatetime = "0.7.1"
+healthConnect = "1.1.0-rc01"
 
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
@@ -48,6 +49,7 @@ kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 turbine = { group = "app.cash.turbine", name = "turbine", version = "1.2.0" }
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+health-connect = { group = "androidx.health.connect", name = "connect-client", version.ref = "healthConnect" }
 
 # ROOM
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
