@@ -16,7 +16,7 @@ class BuildTimelineUseCaseTest {
         val expenses = emptyList<ExpensesItem>()
         val events = emptyList<CalendarEventItem>()
 
-        val result = useCase(expenses, events)
+        val result = useCase(expenses, events, null, null, emptyList())
 
         assertEquals(emptyList<HubTimelineItem>(), result)
     }
@@ -41,7 +41,7 @@ class BuildTimelineUseCaseTest {
                 dateString = "10:00"
             )
         )
-        val result = useCase(expenses, events)
+        val result = useCase(expenses, events, null, null, emptyList())
         val expected = listOf(
             HubTimelineItem.Expense(expenses[1]),  // "10:00" — первый
             HubTimelineItem.Expense(expenses[0])   // "20:00" — второй
@@ -78,7 +78,7 @@ class BuildTimelineUseCaseTest {
         )
         val expenses = listOf(expense1, expense2)
         val events = listOf(event1)
-        val result = useCase(expenses, events)
+        val result = useCase(expenses, events, null, null, emptyList())
 
         val expected = listOf(
             HubTimelineItem.Event(event1),

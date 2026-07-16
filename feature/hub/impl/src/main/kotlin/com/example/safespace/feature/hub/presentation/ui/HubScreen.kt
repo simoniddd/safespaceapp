@@ -706,6 +706,39 @@ private fun TimelineSection(
                                     },
                                 )
                             }
+
+                            is HubTimelineItem.HealthSleep -> {
+                                val sleep = timelineItem.item
+                                TimelineItem(
+                                    dotColor = Color.Gray,
+                                    time = "00:00",
+                                    title = "${sleep.durationMinutes / 60}ч ${sleep.durationMinutes % 60}мин",
+                                    subtitle = "Сон",
+                                    isPast = true
+                                )
+                            }
+
+                            is HubTimelineItem.HealthSteps -> {
+                                val steps = timelineItem.item
+                                TimelineItem(
+                                    dotColor = Color.Gray,
+                                    time = "20:00",
+                                    title = "${steps.count} шагов",
+                                    subtitle = "Шаги",
+                                    isPast = true
+                                )
+                            }
+
+                            is HubTimelineItem.HealthExercise -> {
+                                val exercise = timelineItem.item
+                                TimelineItem(
+                                    dotColor = Color.Gray,
+                                    time = timelineItem.time,
+                                    title = exercise.title.ifEmpty { "Тренировка" },
+                                    subtitle = "${exercise.durationMinutes} мин · ${exercise.source}",
+                                    isPast = true
+                                )
+                            }
                         }
                     }
                 }

@@ -12,8 +12,10 @@ import com.example.safespace.feature.hub.fake.FakeCalendarSource
 import com.example.safespace.feature.hub.fake.FakeEventsSource
 import com.example.safespace.feature.hub.fake.FakeExpensesRepository
 import com.example.safespace.feature.hub.fake.FakeIntentionRepository
+import com.example.safespace.feature.hub.fake.FakeHealthRepository
 import com.example.safespace.feature.hub.fake.FakeIntentionScheduler
 import com.example.safespace.feature.hub.fake.FakeNavigator
+import com.example.safespace.feature.hub.fake.FakeWeatherRepository
 import com.example.safespace.feature.hub.presentation.state.HubTimelineItem
 import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
 import junit.framework.TestCase.assertEquals
@@ -60,6 +62,8 @@ class HubViewModelTest {
         calendarSource = fakeCalendarSource,
         intentionRepository = FakeIntentionRepository(),
         intentionScheduler = FakeIntentionScheduler(),
+        weatherRepository = FakeWeatherRepository(),
+        healthRepository = FakeHealthRepository(),
         navigator = FakeNavigator(),
     )
 

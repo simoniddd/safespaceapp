@@ -3,6 +3,7 @@ package com.example.safespace.feature.hub.presentation.viewmodel
 import androidx.lifecycle.viewModelScope
 import com.example.safespace.core.domain.model.CalendarEventItem
 import com.example.safespace.core.domain.model.WeatherIcon
+import com.example.safespace.core.domain.repository.HealthRepository
 import com.example.safespace.core.domain.repository.IntentionRepository
 import com.example.safespace.core.domain.repository.WeatherRepository
 import com.example.safespace.core.domain.source.EventsSource
@@ -42,6 +43,7 @@ class HubViewModel(
     private val intentionScheduler: IntentionScheduler,
 
     private val weatherRepository: WeatherRepository,
+    private val healthRepository: HealthRepository,
     navigator: Navigator,
 ) : StatefulViewModel<HubState>(HubState(), navigator) {
 
@@ -54,18 +56,35 @@ class HubViewModel(
             flow { emit(eventsSource.getEventsForDate(Clock.System.todayIn(TimeZone.currentSystemDefault()))) }
         }
 
+    @OptIn(ExperimentalTime::class)
+    private val healthFlow = flow {
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        emit(Triple(
+            healthRepository.getStepsForDate(today),
+            healthRepository.getSleepForDate(today),
+            healthRepository.getExercisesForDate(today)
+        ))
+    }
+
     private val expensesWithWeather = combine(
         expensesRepository.getAllExpenses(),
         weatherRepository.observeToday()
     ) { expenses, weather -> expenses to weather }
 
+    private val intentionsFlow = combine(
+        intentionRepository.observeIntentions(),
+        intentionRepository.observeDoneCountByEventId(),
+    ) { intentions, doneCounts -> intentions to doneCounts }
+
     val uiState: StateFlow<HubState> = combine(
         expensesWithWeather,
         systemEventsFlow,
         calendarSource.hiddenCalendarIds,
-        intentionRepository.observeIntentions(),
-        intentionRepository.observeDoneCountByEventId(),
-    ) { expenses, events, hiddenIds, intentions, doneCounts ->
+        intentionsFlow,
+        healthFlow
+    ) { expenses, events, hiddenIds, intentionsPair, health ->
+        val (intentions, doneCounts) = intentionsPair
+
         val filteredEvents = if (hiddenIds.isEmpty()) events
         else events.filter { it.calendarId !in hiddenIds }
 
@@ -73,13 +92,15 @@ class HubViewModel(
             event.copy(intentionState = intentions[event.id])
         }
 
+        val (steps, sleep, exercises) = health
+
         val pendingEvent =
             eventsWithState.firstOrNull { it.intentionState == IntentionState.PENDING }
 
         HubState(
             isLoading = false,
             dailyExpenses = expenses.first.sumOf { it.amount },
-            timelineItems = buildTimeLine(expenses.first, eventsWithState),
+            timelineItems = buildTimeLine(expenses.first, eventsWithState, steps, sleep, exercises),
             pendingQuestion = pendingEvent?.let {
                 PendingQuestion.IntentionCheck(
                     eventId = it.id,

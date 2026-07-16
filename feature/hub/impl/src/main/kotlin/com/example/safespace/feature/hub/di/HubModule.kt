@@ -18,6 +18,7 @@ val hubModule = module {
             intentionRepository = get(),
             intentionScheduler = get(),
             weatherRepository = get(),
+            healthRepository = get(),
             navigator = get(),
         )
     }

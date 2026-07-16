@@ -23,9 +23,11 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import java.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.toJavaInstant
+import kotlin.time.toKotlinInstant
 
 internal class HealthRepositoryImpl(
     private val context: Context,
@@ -73,11 +75,38 @@ internal class HealthRepositoryImpl(
         val totalMinutes = records.sumOf { record ->
             Duration.between(record.startTime, record.endTime).toMinutes()
         }
-        return if(records.isEmpty()) null else SleepSummary(totalMinutes.toInt(), date)
+        return if (records.isEmpty()) null else SleepSummary(totalMinutes.toInt(), date)
     }
 
+    @OptIn(ExperimentalTime::class)
     override suspend fun getExercisesForDate(date: LocalDate): List<ExerciseSession> {
-        TODO("Not yet implemented")
+        client ?: return emptyList()
+        val startInstant = date
+            .atStartOfDayIn(TimeZone.currentSystemDefault())
+            .toJavaInstant()
+
+        val endInstant = date
+            .plus(1, DateTimeUnit.DAY)
+            .atStartOfDayIn(TimeZone.currentSystemDefault())
+            .toJavaInstant()
+
+        val request = ReadRecordsRequest(
+            recordType = ExerciseSessionRecord::class,
+            timeRangeFilter = TimeRangeFilter.between(startInstant, endInstant)
+        )
+        val records = client.readRecords(request).records
+
+        val totalExerciseSession = records.map { record ->
+            ExerciseSession(
+                durationMinutes = Duration
+                    .between(record.startTime, record.endTime).toMinutes().toInt(),
+                title = record.title.orEmpty(),
+                source = record.metadata.dataOrigin.packageName,
+                startTime = record.startTime.toKotlinInstant()
+                    .toLocalDateTime(TimeZone.currentSystemDefault())
+            )
+        }
+        return totalExerciseSession
     }
 
     override suspend fun isAvailable(): HealthAvailability {
