@@ -34,10 +34,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -48,6 +52,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.health.connect.client.PermissionController
+
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -56,6 +62,7 @@ import com.example.safespace.core.domain.model.WeatherIcon
 import com.example.safespace.core.domain.state.IntentionState
 import com.example.safespace.core.ui.components.QuestionAction
 import com.example.safespace.core.ui.components.QuestionCard
+import com.example.safespace.core.ui.theme.AppColors
 import com.example.safespace.core.ui.theme.AppColors.CoralRed
 import com.example.safespace.core.ui.theme.AppColors.ElectricBlue
 import com.example.safespace.core.ui.theme.AppColors.NeonYellow
@@ -80,6 +87,12 @@ fun HubScreen(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) viewModel.refresh()
+    }
+
+    val healthLauncher = rememberLauncherForActivityResult(
+        PermissionController.createRequestPermissionResultContract()
+    ) { granted ->
+        if (granted.containsAll(viewModel.healthPermissions)) viewModel.refresh()
     }
 
     LaunchedEffect(Unit) {
@@ -109,9 +122,7 @@ fun HubScreen(
             .fillMaxSize()
             .background(PureBlack)
     ) {
-        // --- 1. AMBIENT GLOWS (Световые пятна на фоне) ---
-
-        // --- 2. КОНТЕНТ (Поверх стекла) ---
+        // --- КОНТЕНТ (Поверх стекла) ---
         Box(modifier = Modifier.fillMaxSize()) {
 
             Column(
@@ -135,6 +146,11 @@ fun HubScreen(
                 Spacer(modifier = Modifier.height(14.dp))
                 EcosystemWidgets()
                 Spacer(modifier = Modifier.height(26.dp))
+                if (state.showHealthConnectPrompt) {
+                    HealthConnectGhostBlock(
+                        onClick = { healthLauncher.launch(viewModel.healthPermissions) }
+                    )
+                }
                 val q = state.pendingQuestion
                 if (q is PendingQuestion.IntentionCheck) {
                     QuestionCard(
@@ -980,6 +996,47 @@ private fun TimelineItemFuture(time: String, title: String, subtitle: String) {
             color = PureBlack.copy(alpha = 0.3f),
             fontFamily = FontFamily.Monospace
         )
+    }
+}
+
+@Composable
+fun HealthConnectGhostBlock(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .alpha(0.42f)
+            .drawBehind {
+                drawRoundRect(
+                    color = AppColors.GhostStroke,
+                    style = Stroke(
+                        width = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(
+                            floatArrayOf(6.dp.toPx(), 4.dp.toPx())
+                        ),
+                    ),
+                    cornerRadius = CornerRadius(12.dp.toPx()),
+                )
+            }
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = "Подключить Health Connect",
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Normal,
+            )
+            Text(
+                text = "шаги · сон · тренировки",
+                color = Color.Gray,
+                fontSize = 11.sp,
+            )
+        }
     }
 }
 

@@ -3,6 +3,10 @@ package com.example.safespace.feature.hub.presentation.viewmodel
 import androidx.lifecycle.viewModelScope
 import com.example.safespace.core.domain.model.CalendarEventItem
 import com.example.safespace.core.domain.model.WeatherIcon
+import com.example.safespace.core.domain.model.health.DailySteps
+import com.example.safespace.core.domain.model.health.ExerciseSession
+import com.example.safespace.core.domain.model.health.SleepSummary
+import com.example.safespace.core.domain.repository.HealthAvailability
 import com.example.safespace.core.domain.repository.HealthRepository
 import com.example.safespace.core.domain.repository.IntentionRepository
 import com.example.safespace.core.domain.repository.WeatherRepository
@@ -50,20 +54,28 @@ class HubViewModel(
     private val _refreshTrigger = MutableSharedFlow<Unit>(replay = 1)
     private val buildTimeLine = BuildTimelineUseCase()
 
+    val healthPermissions = healthRepository.permissionsToRequest()
+
     @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
     private val systemEventsFlow: Flow<List<CalendarEventItem>> =
         _refreshTrigger.flatMapLatest {
             flow { emit(eventsSource.getEventsForDate(Clock.System.todayIn(TimeZone.currentSystemDefault()))) }
         }
 
-    @OptIn(ExperimentalTime::class)
-    private val healthFlow = flow {
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        emit(Triple(
-            healthRepository.getStepsForDate(today),
-            healthRepository.getSleepForDate(today),
-            healthRepository.getExercisesForDate(today)
-        ))
+    @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
+    private val healthFlow = _refreshTrigger.flatMapLatest {
+        flow {
+            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+            val availability = healthRepository.isAvailable()
+            if (availability == HealthAvailability.AVAILABLE) {
+                val steps = healthRepository.getStepsForDate(today)
+                val sleep = healthRepository.getSleepForDate(today)
+                val exercises = healthRepository.getExercisesForDate(today)
+                emit(Triple(steps, sleep, exercises) to availability)
+            } else {
+                emit(Triple<DailySteps?, SleepSummary?, List<ExerciseSession>>(null, null, emptyList()) to availability)
+            }
+        }
     }
 
     private val expensesWithWeather = combine(
@@ -92,7 +104,8 @@ class HubViewModel(
             event.copy(intentionState = intentions[event.id])
         }
 
-        val (steps, sleep, exercises) = health
+        val (healthData, healthAvailability) = health
+        val (steps, sleep, exercises) = healthData
 
         val pendingEvent =
             eventsWithState.firstOrNull { it.intentionState == IntentionState.PENDING }
@@ -109,7 +122,9 @@ class HubViewModel(
                 )
             },
             doneCountByEventId = doneCounts,
-            todayIcon = expenses.second
+            todayIcon = expenses.second,
+            healthAvailability = healthAvailability,
+            showHealthConnectPrompt = healthAvailability == HealthAvailability.NO_PERMISSION
         )
     }.stateIn(
         scope = viewModelScope,

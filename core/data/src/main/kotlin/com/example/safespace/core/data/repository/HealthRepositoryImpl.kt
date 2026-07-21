@@ -124,6 +124,10 @@ internal class HealthRepositoryImpl(
         }
     }
 
+    override fun permissionsToRequest(): Set<String> {
+        return PERMISSIONS
+    }
+
     companion object {
         val PERMISSIONS = setOf(
             HealthPermission.getReadPermission(StepsRecord::class),
