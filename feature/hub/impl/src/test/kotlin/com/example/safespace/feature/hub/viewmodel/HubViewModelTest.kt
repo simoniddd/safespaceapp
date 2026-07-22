@@ -6,6 +6,7 @@ import app.cash.turbine.test
 import com.example.safespace.core.domain.model.CalendarEventItem
 import com.example.safespace.core.domain.model.EventType
 import com.example.safespace.core.domain.model.ExpensesItem
+import com.example.safespace.core.domain.usecase.AutoConfirmIntentionsUseCase
 import com.example.safespace.feature.calendar.navigation.CalendarEntryPoint
 import com.example.safespace.feature.expenses.navigation.ExpensesEntryPoint
 import com.example.safespace.feature.hub.fake.FakeCalendarSource
@@ -64,6 +65,7 @@ class HubViewModelTest {
         intentionScheduler = FakeIntentionScheduler(),
         weatherRepository = FakeWeatherRepository(),
         healthRepository = FakeHealthRepository(),
+        autoConfirmIntentionsUseCase = AutoConfirmIntentionsUseCase(),
         navigator = FakeNavigator(),
     )
 

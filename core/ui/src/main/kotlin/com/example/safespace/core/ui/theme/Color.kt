@@ -108,4 +108,14 @@ object AppColors {
     val RainDrop = Color.White.copy(alpha = 0.28f)
     val SunGlint = Color(0xFFF6EA00)
 
+    // Health "body" genre — тише траты (5.5%) и события (7%): пассивный источник
+    val GlassBody = Color.White.copy(alpha = 0.045f)
+    val BodyOutline = Color.White.copy(alpha = 0.07f)
+    val BodyDigit = Color.White.copy(alpha = 0.75f)
+    val BodySubtitle = Color.White.copy(alpha = 0.42f)
+
+    // SourceStamp
+    val SourceStampSize = 26.dp
+    val SourceStampBg = Color.White.copy(alpha = 0.08f)
+    val SourceStampText = Color.White.copy(alpha = 0.55f)
 }

@@ -4,14 +4,14 @@ import androidx.lifecycle.viewModelScope
 import com.example.safespace.core.domain.model.CalendarEventItem
 import com.example.safespace.core.domain.model.WeatherIcon
 import com.example.safespace.core.domain.model.health.DailySteps
-import com.example.safespace.core.domain.model.health.ExerciseSession
-import com.example.safespace.core.domain.model.health.SleepSummary
-import com.example.safespace.core.domain.repository.HealthAvailability
+import com.example.safespace.core.domain.model.health.HealthDataType
+import com.example.safespace.core.domain.model.health.HealthState
 import com.example.safespace.core.domain.repository.HealthRepository
 import com.example.safespace.core.domain.repository.IntentionRepository
 import com.example.safespace.core.domain.repository.WeatherRepository
 import com.example.safespace.core.domain.source.EventsSource
 import com.example.safespace.core.domain.state.IntentionState
+import com.example.safespace.core.domain.usecase.AutoConfirmIntentionsUseCase
 import com.example.safespace.core.domain.worker.IntentionScheduler
 import com.example.safespace.core.presentation.StatefulViewModel
 import com.example.safespace.core.presentation.navigation.Navigator
@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
@@ -45,16 +46,20 @@ class HubViewModel(
     private val calendarSource: CalendarSource,
     private val intentionRepository: IntentionRepository,
     private val intentionScheduler: IntentionScheduler,
-
     private val weatherRepository: WeatherRepository,
     private val healthRepository: HealthRepository,
+    private val autoConfirmIntentionsUseCase: AutoConfirmIntentionsUseCase,
     navigator: Navigator,
 ) : StatefulViewModel<HubState>(HubState(), navigator) {
 
     private val _refreshTrigger = MutableSharedFlow<Unit>(replay = 1)
     private val buildTimeLine = BuildTimelineUseCase()
 
-    val healthPermissions = healthRepository.permissionsToRequest()
+    // Атомарный набор: у UI один launcher, просит сразу три типа.
+    // Модель уже поддерживает per-type грануляцию (NoPermission.toRequest),
+    // так что переход на «частичное присутствие» не потребует ломки VM.
+    val healthPermissions: Set<String> =
+        healthRepository.permissionsFor(HealthDataType.entries.toSet())
 
     @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
     private val systemEventsFlow: Flow<List<CalendarEventItem>> =
@@ -63,24 +68,16 @@ class HubViewModel(
         }
 
     @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
-    private val healthFlow = _refreshTrigger.flatMapLatest {
+    private val healthFlow: Flow<HealthState> = _refreshTrigger.flatMapLatest {
         flow {
             val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-            val availability = healthRepository.isAvailable()
-            if (availability == HealthAvailability.AVAILABLE) {
-                val steps = healthRepository.getStepsForDate(today)
-                val sleep = healthRepository.getSleepForDate(today)
-                val exercises = healthRepository.getExercisesForDate(today)
-                emit(Triple(steps, sleep, exercises) to availability)
-            } else {
-                emit(Triple<DailySteps?, SleepSummary?, List<ExerciseSession>>(null, null, emptyList()) to availability)
-            }
+            emit(healthRepository.getState(today))
         }
     }
 
     private val expensesWithWeather = combine(
         expensesRepository.getAllExpenses(),
-        weatherRepository.observeToday()
+        weatherRepository.observeToday(),
     ) { expenses, weather -> expenses to weather }
 
     private val intentionsFlow = combine(
@@ -88,13 +85,14 @@ class HubViewModel(
         intentionRepository.observeDoneCountByEventId(),
     ) { intentions, doneCounts -> intentions to doneCounts }
 
+    @OptIn(ExperimentalTime::class)
     val uiState: StateFlow<HubState> = combine(
         expensesWithWeather,
         systemEventsFlow,
         calendarSource.hiddenCalendarIds,
         intentionsFlow,
-        healthFlow
-    ) { expenses, events, hiddenIds, intentionsPair, health ->
+        healthFlow,
+    ) { expenses, events, hiddenIds, intentionsPair, healthState ->
         val (intentions, doneCounts) = intentionsPair
 
         val filteredEvents = if (hiddenIds.isEmpty()) events
@@ -104,8 +102,11 @@ class HubViewModel(
             event.copy(intentionState = intentions[event.id])
         }
 
-        val (healthData, healthAvailability) = health
-        val (steps, sleep, exercises) = healthData
+        val available = (healthState as? HealthState.Available)?.data
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val steps = available?.steps?.let { DailySteps(count = it, date = today) }
+        val sleep = available?.sleep
+        val exercises = available?.exercises.orEmpty()
 
         val pendingEvent =
             eventsWithState.firstOrNull { it.intentionState == IntentionState.PENDING }
@@ -123,8 +124,7 @@ class HubViewModel(
             },
             doneCountByEventId = doneCounts,
             todayIcon = expenses.second,
-            healthAvailability = healthAvailability,
-            showHealthConnectPrompt = healthAvailability == HealthAvailability.NO_PERMISSION
+            healthState = healthState,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -134,6 +134,40 @@ class HubViewModel(
 
     init {
         refresh()
+        observeAutoConfirmations()
+    }
+
+    // Автоподтверждение намерения при ExerciseSession в окне события.
+    // Отдельный collector, а НЕ внутри combine uiState: combine — про построение
+    // презентационного состояния (чистая трансформация), а updateStatus — сайд-эффект
+    // (пишет в БД). Смешивать нельзя: (1) combine потерял бы чистоту, (2) uiState стал бы
+    // eager при подписке из VM, ломая тесты с ленивым setEvents().
+    // Триггер — тот же _refreshTrigger, что кормит uiState. Двойное чтение Health/Events
+    // за refresh — плата за развязку. Достаточно: реальный refresh случается на
+    // ON_RESUME + вручную; между ними Health-данные всё равно не меняются.
+    private fun observeAutoConfirmations() {
+        viewModelScope.launch {
+            _refreshTrigger.collect { runAutoConfirm() }
+        }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    private suspend fun runAutoConfirm() {
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val available = (healthRepository.getState(today) as? HealthState.Available)?.data ?: return
+        if (available.exercises.isEmpty()) return
+
+        val events = eventsSource.getEventsForDate(today)
+        val intentions = intentionRepository.observeIntentions().first()
+        val eventsWithState = events.map { it.copy(intentionState = intentions[it.id]) }
+
+        autoConfirmIntentionsUseCase(
+            events = eventsWithState,
+            exercises = available.exercises,
+            timeZone = TimeZone.currentSystemDefault(),
+        ).forEach { c ->
+            intentionRepository.updateStatus(c.eventId, c.instanceStart, IntentionState.DONE)
+        }
     }
 
     fun refresh() {
@@ -171,7 +205,6 @@ class HubViewModel(
 
     fun postponeIntention(eventId: String, instanceStart: Long) {
         viewModelScope.launch {
-            // сдвигаем проверку на час вперёд и скрываем карточку
             intentionScheduler.scheduleIntentionCheck(
                 eventId = eventId,
                 instanceStart = instanceStart,

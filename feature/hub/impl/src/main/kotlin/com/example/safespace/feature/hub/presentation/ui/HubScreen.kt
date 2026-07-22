@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,14 +54,18 @@ import androidx.core.content.ContextCompat
 import androidx.health.connect.client.PermissionController
 
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.safespace.core.domain.model.WeatherIcon
+import com.example.safespace.core.domain.model.health.HealthState
 import com.example.safespace.core.domain.state.IntentionState
 import com.example.safespace.core.ui.components.QuestionAction
 import com.example.safespace.core.ui.components.QuestionCard
+import com.example.safespace.core.ui.components.SourceStamp
+import com.example.safespace.core.ui.components.toSourceLabel
 import com.example.safespace.core.ui.theme.AppColors
+import com.example.safespace.core.ui.theme.BodyDigitStyle
 import com.example.safespace.core.ui.theme.AppColors.CoralRed
 import com.example.safespace.core.ui.theme.AppColors.ElectricBlue
 import com.example.safespace.core.ui.theme.AppColors.NeonYellow
@@ -106,15 +109,17 @@ fun HubScreen(
         }
     }
 
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.refresh()
-            }
+    // repeatOnLifecycle(STARTED) — канонический паттерн: тело запускается когда
+    // владелец достигает STARTED, отменяется при уходе ниже. Здесь refresh() —
+    // fire-and-forget, поэтому тело завершается сразу; при следующем STOP→START
+    // repeatOnLifecycle запустит блок заново. Ручной LifecycleEventObserver с
+    // ON_RESUME/onDispose даёт тот же эффект, но требует ручного управления
+    // подпиской — repeatOnLifecycle делает это через structured concurrency.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.refresh()
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Box(
@@ -146,7 +151,10 @@ fun HubScreen(
                 Spacer(modifier = Modifier.height(14.dp))
                 EcosystemWidgets()
                 Spacer(modifier = Modifier.height(26.dp))
-                if (state.showHealthConnectPrompt) {
+                // NotInstalled → тихо (Закон 1: пустой день ≠ упрёк).
+                // NoPermission → призрачный блок-приглашение.
+                // Available → блоки рендерятся внутри TimelineSection.
+                if (state.healthState is HealthState.NoPermission) {
                     HealthConnectGhostBlock(
                         onClick = { healthLauncher.launch(viewModel.healthPermissions) }
                     )
@@ -725,34 +733,34 @@ private fun TimelineSection(
 
                             is HubTimelineItem.HealthSleep -> {
                                 val sleep = timelineItem.item
-                                TimelineItem(
-                                    dotColor = Color.Gray,
-                                    time = "00:00",
-                                    title = "${sleep.durationMinutes / 60}ч ${sleep.durationMinutes % 60}мин",
-                                    subtitle = "Сон",
-                                    isPast = true
+                                val hours = sleep.durationMinutes / 60
+                                val mins = sleep.durationMinutes % 60
+                                HealthTimelineItem(
+                                    sourceLabel = "HC",
+                                    primary = "${hours}ч ${mins.toString().padStart(2, '0')}мин",
+                                    secondary = "Сон",
+                                    time = null,
                                 )
                             }
 
                             is HubTimelineItem.HealthSteps -> {
                                 val steps = timelineItem.item
-                                TimelineItem(
-                                    dotColor = Color.Gray,
-                                    time = "20:00",
-                                    title = "${steps.count} шагов",
-                                    subtitle = "Шаги",
-                                    isPast = true
+                                HealthTimelineItem(
+                                    sourceLabel = "HC",
+                                    primary = formatSteps(steps.count),
+                                    secondary = "Шаги",
+                                    hint = "· ещё идёт",
+                                    time = null,
                                 )
                             }
 
                             is HubTimelineItem.HealthExercise -> {
                                 val exercise = timelineItem.item
-                                TimelineItem(
-                                    dotColor = Color.Gray,
+                                HealthTimelineItem(
+                                    sourceLabel = exercise.source.toSourceLabel(),
+                                    primary = exercise.title.ifEmpty { "Тренировка" },
+                                    secondary = "${exercise.durationMinutes} мин",
                                     time = timelineItem.time,
-                                    title = exercise.title.ifEmpty { "Тренировка" },
-                                    subtitle = "${exercise.durationMinutes} мин · ${exercise.source}",
-                                    isPast = true
                                 )
                             }
                         }
@@ -1039,6 +1047,77 @@ fun HealthConnectGhostBlock(
         }
     }
 }
+
+/**
+ * Health-жанр в ленте: печать источника слева, tnum-цифры, стекло 4.5% (тише траты 5.5%
+ * и события 7%). Без цветной точки — источник данных, а не событие пользователя.
+ */
+@Composable
+private fun HealthTimelineItem(
+    sourceLabel: String,
+    primary: String,
+    secondary: String,
+    time: String?,
+    hint: String? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(AppColors.GlassBody)
+            .border(1.dp, AppColors.BodyOutline, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SourceStamp(label = sourceLabel)
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = primary,
+                    style = BodyDigitStyle,
+                    color = AppColors.BodyDigit,
+                )
+                if (hint != null) {
+                    Text(
+                        text = hint,
+                        fontSize = 10.sp,
+                        color = AppColors.BodySubtitle,
+                        fontFamily = FontFamily.Monospace,
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = secondary,
+                fontSize = 10.sp,
+                letterSpacing = 1.sp,
+                color = AppColors.BodySubtitle,
+                fontFamily = FontFamily.Monospace,
+            )
+        }
+        if (time != null) {
+            Text(
+                text = time,
+                style = BodyDigitStyle,
+                color = AppColors.BodySubtitle,
+            )
+        }
+    }
+}
+
+// Форматирование шагов с неразрывным пробелом-разделителем тысяч: "8 042".
+// Не String.format(%,d) — чтобы не тащить локаль-зависимость (в ru будет ", ").
+private fun formatSteps(count: Int): String =
+    buildString {
+        val str = count.toString()
+        str.forEachIndexed { i, ch ->
+            if (i > 0 && (str.length - i) % 3 == 0) append(' ')
+            append(ch)
+        }
+        append(" шагов")
+    }
 
 // Посмотри на этот Preview. Он отрендерит ровно то, что было в HTML.
 @Preview(showBackground = true)

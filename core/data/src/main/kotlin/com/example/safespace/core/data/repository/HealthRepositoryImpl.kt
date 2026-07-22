@@ -9,10 +9,11 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
-import com.example.safespace.core.domain.model.health.DailySteps
 import com.example.safespace.core.domain.model.health.ExerciseSession
+import com.example.safespace.core.domain.model.health.HealthDataType
+import com.example.safespace.core.domain.model.health.HealthDayData
+import com.example.safespace.core.domain.model.health.HealthState
 import com.example.safespace.core.domain.model.health.SleepSummary
-import com.example.safespace.core.domain.repository.HealthAvailability
 import com.example.safespace.core.domain.repository.HealthRepository
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -31,108 +32,99 @@ import kotlin.time.toKotlinInstant
 
 internal class HealthRepositoryImpl(
     private val context: Context,
-    private val client: HealthConnectClient?
+    private val client: HealthConnectClient?,
 ) : HealthRepository {
 
-    @OptIn(ExperimentalTime::class)
-    override suspend fun getStepsForDate(date: LocalDate): DailySteps? {
-        client ?: return null
-        val startInstant = date
-            .atStartOfDayIn(TimeZone.currentSystemDefault())
-            .toJavaInstant()
-        val endInstant = date
-            .plus(1, DateTimeUnit.DAY)
-            .atStartOfDayIn(TimeZone.currentSystemDefault())
-            .toJavaInstant()
+    override suspend fun getState(date: LocalDate): HealthState {
+        val sdkAvailable = HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
+        if (!sdkAvailable || client == null) return HealthState.NotInstalled
 
-        val request = AggregateRequest(
-            metrics = setOf(StepsRecord.COUNT_TOTAL),
-            timeRangeFilter = TimeRangeFilter.between(startInstant, endInstant)
+        val granted = client.permissionController.getGrantedPermissions()
+        val missing = PERMISSION_BY_TYPE
+            .filterValues { it !in granted }
+            .keys
+        if (missing.isNotEmpty()) return HealthState.NoPermission(toRequest = missing)
+
+        return HealthState.Available(data = readDayData(client, date))
+    }
+
+    override fun permissionsFor(types: Set<HealthDataType>): Set<String> =
+        types.mapNotNull { PERMISSION_BY_TYPE[it] }.toSet()
+
+    private suspend fun readDayData(client: HealthConnectClient, date: LocalDate): HealthDayData =
+        HealthDayData(
+            steps = readSteps(client, date),
+            sleep = readSleep(client, date),
+            exercises = readExercises(client, date),
         )
 
-        val response = client.aggregate(request)
+    @OptIn(ExperimentalTime::class)
+    private suspend fun readSteps(client: HealthConnectClient, date: LocalDate): Int? {
+        val tz = TimeZone.currentSystemDefault()
+        val start = date.atStartOfDayIn(tz).toJavaInstant()
+        val end = date.plus(1, DateTimeUnit.DAY).atStartOfDayIn(tz).toJavaInstant()
 
-        val count = response.get(StepsRecord.COUNT_TOTAL)
-        return if (count == null) null else DailySteps(count.toInt(), date)
+        val response = client.aggregate(
+            AggregateRequest(
+                metrics = setOf(StepsRecord.COUNT_TOTAL),
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+            )
+        )
+        return response[StepsRecord.COUNT_TOTAL]?.toInt()
     }
 
     @OptIn(ExperimentalTime::class)
-    override suspend fun getSleepForDate(date: LocalDate): SleepSummary? {
-        client ?: return null
-        val yesterdayDate = date.minus(1, DateTimeUnit.DAY)
-        val noonTime = LocalTime(hour = 12, minute = 0)
-        val yesterdayNoon = LocalDateTime(yesterdayDate, noonTime)
-        val todayNoon = LocalDateTime(date, noonTime)
+    private suspend fun readSleep(client: HealthConnectClient, date: LocalDate): SleepSummary? {
+        val tz = TimeZone.currentSystemDefault()
+        val yesterdayNoon = LocalDateTime(date.minus(1, DateTimeUnit.DAY), NOON)
+        val todayNoon = LocalDateTime(date, NOON)
 
-        val startInstant = yesterdayNoon.toInstant(TimeZone.currentSystemDefault()).toJavaInstant()
-        val endInstant = todayNoon.toInstant(TimeZone.currentSystemDefault()).toJavaInstant()
+        val records = client.readRecords(
+            ReadRecordsRequest(
+                recordType = SleepSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(
+                    yesterdayNoon.toInstant(tz).toJavaInstant(),
+                    todayNoon.toInstant(tz).toJavaInstant(),
+                ),
+            )
+        ).records
 
-        val request = ReadRecordsRequest(
-            recordType = SleepSessionRecord::class,
-            timeRangeFilter = TimeRangeFilter.between(startInstant, endInstant)
-        )
-        val records = client.readRecords(request).records
+        if (records.isEmpty()) return null
+
         val totalMinutes = records.sumOf { record ->
             Duration.between(record.startTime, record.endTime).toMinutes()
         }
-        return if (records.isEmpty()) null else SleepSummary(totalMinutes.toInt(), date)
+        return SleepSummary(durationMinutes = totalMinutes.toInt(), date = date)
     }
 
     @OptIn(ExperimentalTime::class)
-    override suspend fun getExercisesForDate(date: LocalDate): List<ExerciseSession> {
-        client ?: return emptyList()
-        val startInstant = date
-            .atStartOfDayIn(TimeZone.currentSystemDefault())
-            .toJavaInstant()
+    private suspend fun readExercises(client: HealthConnectClient, date: LocalDate): List<ExerciseSession> {
+        val tz = TimeZone.currentSystemDefault()
+        val start = date.atStartOfDayIn(tz).toJavaInstant()
+        val end = date.plus(1, DateTimeUnit.DAY).atStartOfDayIn(tz).toJavaInstant()
 
-        val endInstant = date
-            .plus(1, DateTimeUnit.DAY)
-            .atStartOfDayIn(TimeZone.currentSystemDefault())
-            .toJavaInstant()
-
-        val request = ReadRecordsRequest(
-            recordType = ExerciseSessionRecord::class,
-            timeRangeFilter = TimeRangeFilter.between(startInstant, endInstant)
-        )
-        val records = client.readRecords(request).records
-
-        val totalExerciseSession = records.map { record ->
+        return client.readRecords(
+            ReadRecordsRequest(
+                recordType = ExerciseSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+            )
+        ).records.map { record ->
             ExerciseSession(
-                durationMinutes = Duration
-                    .between(record.startTime, record.endTime).toMinutes().toInt(),
+                durationMinutes = Duration.between(record.startTime, record.endTime).toMinutes().toInt(),
                 title = record.title.orEmpty(),
                 source = record.metadata.dataOrigin.packageName,
-                startTime = record.startTime.toKotlinInstant()
-                    .toLocalDateTime(TimeZone.currentSystemDefault())
+                startTime = record.startTime.toKotlinInstant().toLocalDateTime(tz),
             )
         }
-        return totalExerciseSession
     }
 
-    override suspend fun isAvailable(): HealthAvailability {
-        return when (HealthConnectClient.getSdkStatus(context)) {
-            HealthConnectClient.SDK_AVAILABLE -> {
-                val granted = client?.permissionController?.getGrantedPermissions()
-                if (granted?.containsAll(PERMISSIONS) == true) {
-                    HealthAvailability.AVAILABLE
-                } else {
-                    HealthAvailability.NO_PERMISSION
-                }
-            }
+    private companion object {
+        val NOON: LocalTime = LocalTime(hour = 12, minute = 0)
 
-            else -> HealthAvailability.NOT_INSTALLED
-        }
-    }
-
-    override fun permissionsToRequest(): Set<String> {
-        return PERMISSIONS
-    }
-
-    companion object {
-        val PERMISSIONS = setOf(
-            HealthPermission.getReadPermission(StepsRecord::class),
-            HealthPermission.getReadPermission(SleepSessionRecord::class),
-            HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+        val PERMISSION_BY_TYPE: Map<HealthDataType, String> = mapOf(
+            HealthDataType.STEPS to HealthPermission.getReadPermission(StepsRecord::class),
+            HealthDataType.SLEEP to HealthPermission.getReadPermission(SleepSessionRecord::class),
+            HealthDataType.EXERCISE to HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         )
     }
 }

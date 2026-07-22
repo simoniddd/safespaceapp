@@ -50,3 +50,22 @@ val SafeSpaceTypography = Typography(
         lineHeight = 20.sp
     )
 )
+
+// Моноцифры для Health-жанра: числа не «прыгают» при смене значений (tabular numerals).
+// FontFamily.Monospace даёт tabular по умолчанию, "tnum" — страховка для sans-шрифтов в будущем.
+val BodyDigitStyle: TextStyle = TextStyle(
+    fontFamily = MonoFont,
+    fontFeatureSettings = "tnum",
+    fontWeight = FontWeight.Medium,
+    fontSize = 15.sp,
+    lineHeight = 20.sp,
+)
+
+// Капитель для «печати источника»: короткие 2–4 буквы, широкий трекинг.
+val SourceStampStyle: TextStyle = TextStyle(
+    fontFamily = BodyFont,
+    fontWeight = FontWeight.SemiBold,
+    fontSize = 9.sp,
+    lineHeight = 10.sp,
+    letterSpacing = 1.2.sp,
+)

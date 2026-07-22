@@ -5,8 +5,8 @@ import com.example.safespace.core.domain.model.ExpensesItem
 import com.example.safespace.core.domain.model.WeatherIcon
 import com.example.safespace.core.domain.model.health.DailySteps
 import com.example.safespace.core.domain.model.health.ExerciseSession
+import com.example.safespace.core.domain.model.health.HealthState
 import com.example.safespace.core.domain.model.health.SleepSummary
-import com.example.safespace.core.domain.repository.HealthAvailability
 
 sealed interface HubTimelineItem {
     val id: String
@@ -57,6 +57,5 @@ data class HubState(
     val timelineItems: List<HubTimelineItem> = emptyList(),
     val pendingQuestion: PendingQuestion? = null,
     val doneCountByEventId: Map<String, Int> = emptyMap(),
-    val healthAvailability: HealthAvailability = HealthAvailability.NOT_INSTALLED,
-    val showHealthConnectPrompt: Boolean = false,
+    val healthState: HealthState = HealthState.NotInstalled,
 )
