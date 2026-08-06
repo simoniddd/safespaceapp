@@ -29,4 +29,8 @@ dependencies {
 
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
+
+    // Для Clock/TimeZone/todayIn во ViewModel — тот же стек, что в HubViewModel.
+    implementation(libs.kotlinx.datetime)
+    implementation(libs.kotlinx.coroutines.core)
 }

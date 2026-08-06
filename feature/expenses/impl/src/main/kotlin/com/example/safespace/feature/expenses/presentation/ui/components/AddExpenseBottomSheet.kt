@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.safespace.core.domain.model.CalendarEventItem
 import com.example.safespace.core.domain.model.Emotion
 import com.example.safespace.core.domain.model.ExpenseCategory
 import com.example.safespace.core.ui.components.toEmoji
@@ -53,6 +54,9 @@ import com.example.safespace.core.ui.theme.SheetBg
 @Composable
 fun AddExpenseBottomSheet(
     categories: List<ExpenseCategory>,
+    matchingEvents: List<CalendarEventItem>,
+    selectedLinkedEvent: CalendarEventItem?,
+    onLinkedEventTap: (CalendarEventItem?) -> Unit,
     onDismiss: () -> Unit,
     onSave: (amount: String, description: String, category: ExpenseCategory?, emotion: Emotion?) -> Unit,
 ) {
@@ -163,6 +167,17 @@ fun AddExpenseBottomSheet(
                                 inner()
                             }
                         }
+                    )
+                }
+
+                // Слот привязки к событию — между суммой и описанием.
+                // Пусто → композиция не эмитится вовсе (высота 0, ничего «не двигает»).
+                if (matchingEvents.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    LinkedEventChipsRow(
+                        events = matchingEvents,
+                        selected = selectedLinkedEvent,
+                        onTap = onLinkedEventTap,
                     )
                 }
 
@@ -353,6 +368,64 @@ private fun EmotionChip(
         Text(
             text = emotion.toEmoji()
         )
+    }
+}
+
+/**
+ * Строка чипов «📅 <title>» — до 2 штук по дизайну body-layer.md.
+ * Тап по выбранному чипу снимает выбор (передаёт null).
+ * Не выбран = стекло 0.28% + белый бордер; выбран = плотнее + янтарный бордер + ✓.
+ */
+@Composable
+private fun LinkedEventChipsRow(
+    events: List<CalendarEventItem>,
+    selected: CalendarEventItem?,
+    onTap: (CalendarEventItem?) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        events.forEach { event ->
+            LinkedEventChip(
+                event = event,
+                isSelected = selected?.id == event.id,
+                onClick = { onTap(if (selected?.id == event.id) null else event) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun LinkedEventChip(
+    event: CalendarEventItem,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    val bg = if (isSelected) Color.White.copy(alpha = 0.55f) else Color.White.copy(alpha = 0.28f)
+    val borderColor = if (isSelected) AccentYel else Color.White.copy(alpha = 0.55f)
+    Row(
+        modifier = Modifier
+            .background(bg, RoundedCornerShape(20.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 15.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "📅 ${event.title}",
+            style = TextStyle(
+                fontFamily = FontFamily.Serif,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                fontSize = 12.sp, color = Ink,
+            )
+        )
+        if (isSelected) {
+            Spacer(Modifier.width(6.dp))
+            Text("✓", fontSize = 12.sp, color = Ink)
+        }
     }
 }
 

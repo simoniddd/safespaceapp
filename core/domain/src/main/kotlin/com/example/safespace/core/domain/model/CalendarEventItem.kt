@@ -12,4 +12,7 @@ data class CalendarEventItem(
     val durationMin: Int,
     val type: EventType,
     val intentionState: IntentionState? = null,
+    // Идентификатор серии (Events._ID у recurring instances).
+    // null для one-off — так «обычно ~$80» имеет право быть скрытым.
+    val recurringEventId: String? = null,
 )

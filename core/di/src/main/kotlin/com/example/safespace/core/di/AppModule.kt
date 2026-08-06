@@ -16,7 +16,10 @@ val appModule = module {
             "safespace_db"
         )
             .fallbackToDestructiveMigration(false)
-            .addMigrations(SafeSpaceDatabase.MIGRATION_4_5)
+            .addMigrations(
+                SafeSpaceDatabase.MIGRATION_4_5,
+                SafeSpaceDatabase.MIGRATION_5_6,
+            )
             .build()
     }
 

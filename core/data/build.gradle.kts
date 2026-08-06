@@ -9,12 +9,19 @@ android {
 
     defaultConfig {
         minSdk = 26
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+}
+
+// Экспорт схем Room (schemas/<version>.json) — нужен MigrationTestHelper
+// и стабильному диффу схем в git.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
@@ -31,4 +38,9 @@ dependencies {
     // Сам AndroidX WorkManager
     implementation(libs.androidx.workmanager)
     ksp(libs.room.compiler)
+
+    // MigrationTestHelper + JUnit4 runner для androidTest
+    androidTestImplementation(libs.room.testing)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.junit)
 }
