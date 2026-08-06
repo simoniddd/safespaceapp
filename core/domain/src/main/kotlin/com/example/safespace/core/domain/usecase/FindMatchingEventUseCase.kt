@@ -15,15 +15,16 @@ class FindMatchingEventUseCase {
         expenseTime: Long,
         events: List<CalendarEventItem>,
         bufferAfter: Duration = 1.hours,
-    ): List<CalendarEventItem> {
-        val bufferMs = bufferAfter.inWholeMilliseconds
-        return events
-            .filter { event ->
-                val startMs = event.timeStamp
-                val endMs = startMs + event.durationMin.minutes.inWholeMilliseconds
-                // окно [startMs, endMs + bufferMs) — полуоткрытое, «until» = exclusive top
-                expenseTime in startMs until (endMs + bufferMs)
-            }
+    ): List<CalendarEventItem> =
+        events
+            .filter { event -> expenseTime in event.timeStamp until event.windowEndMs(bufferAfter) }
             .sortedWith(compareBy({ it.timeStamp }, { it.id }))
-    }
 }
+
+/**
+ * Верхняя (exclusive) граница окна матча события: конец события + асимметричный буфер.
+ * Используется в паре с `until`: окно = `[timeStamp, windowEndMs)`.
+ */
+@OptIn(ExperimentalTime::class)
+private fun CalendarEventItem.windowEndMs(bufferAfter: Duration): Long =
+    timeStamp + durationMin.minutes.inWholeMilliseconds + bufferAfter.inWholeMilliseconds

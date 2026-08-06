@@ -130,6 +130,9 @@ fun ExpensesScreen(
     if (state.isAddSheetOpened) {
         AddExpenseBottomSheet(
             categories = state.categories,
+            matchingEvents = state.matchingEvents,
+            selectedLinkedEvent = state.selectedLinkedEvent,
+            onLinkedEventTap = { viewModel.onEvent(ExpensesUiEvent.OnLinkedEventSelected(it)) },
             onDismiss = { viewModel.onEvent(ExpensesUiEvent.OnToggleAddSheet(false)) },
             onSave = { amount, description, category, emotion ->
                 viewModel.onEvent(ExpensesUiEvent.OnAmountChanged(amount))

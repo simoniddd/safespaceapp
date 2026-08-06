@@ -125,7 +125,7 @@ fun HubScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureBlack)
+            .background(Color.Transparent)
     ) {
         // --- КОНТЕНТ (Поверх стекла) ---
         Box(modifier = Modifier.fillMaxSize()) {
@@ -189,6 +189,7 @@ fun HubScreen(
                 TimelineSection(
                     items = state.timelineItems,
                     doneCountByEventId = state.doneCountByEventId,
+                    eventAggregates = state.eventAggregates,
                     onMarkIntention = viewModel::markEventAsIntention,
                 )
             }
@@ -648,6 +649,7 @@ private fun GlassWidgetCard(
 private fun TimelineSection(
     items: List<HubTimelineItem>,
     doneCountByEventId: Map<String, Int>,
+    eventAggregates: Map<String, com.example.safespace.feature.hub.presentation.state.EventAggregate>,
     onMarkIntention: (eventId: String, instanceStart: Long, durationMin: Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -704,21 +706,37 @@ private fun TimelineSection(
                         when (timelineItem) {
                             is HubTimelineItem.Expense -> {
                                 val expense = timelineItem.item
+                                // 📎 = маркер связи с событием (хронология не сдвигается,
+                                // трата остаётся на своём времени). Полный коннектор — день 24.
+                                val linkedMark = if (expense.eventId != null) "📎 " else ""
                                 TimelineItem(
                                     dotColor = CoralRed,
                                     time = expense.dateString,
                                     title = expense.description,
-                                    subtitle = "${expense.category.uppercase()} · -$${expense.amount}",
+                                    subtitle = "$linkedMark${expense.category.uppercase()} · -$${expense.amount}",
                                     isPast = true
                                 )
                             }
 
                             is HubTimelineItem.Event -> {
                                 val event = timelineItem.item
+                                val aggregate = eventAggregates[event.id]
+                                val baseSubtitle = "${event.type.name} · ${event.durationMin} мин"
+                                // «· 3 траты · $46 · 4ч» — свёрнутая сводка per body-layer.md.
+                                // Показываем только если траты привязаны, иначе шум.
+                                val extendedSubtitle = if (aggregate != null && aggregate.expenseCount > 0) {
+                                    val sum = "%.0f".format(aggregate.totalExpense)
+                                    val hours = "%.1f".format(aggregate.durationHours).trimEnd('0').trimEnd('.')
+                                    "$baseSubtitle · ${aggregate.expenseCount} тр · \$$sum · ${hours}ч"
+                                } else baseSubtitle
+                                val recurringHint = aggregate?.recurringAverage?.let {
+                                    "обычно ~\$${"%.0f".format(it)}"
+                                }
                                 EventTimelineItem(
                                     time = event.timeString,
                                     title = event.title,
-                                    subtitle = "${event.type.name} · ${event.durationMin} мин",
+                                    subtitle = extendedSubtitle,
+                                    recurringHint = recurringHint,
                                     intentionState = event.intentionState,
                                     doneCount = doneCountByEventId[event.id] ?: 0,
                                     onMarkIntention = {
@@ -829,6 +847,7 @@ private fun EventTimelineItem(
     intentionState: IntentionState?,
     doneCount: Int,
     onMarkIntention: () -> Unit,
+    recurringHint: String? = null,
 ) {
     Row(
         modifier = Modifier
@@ -880,6 +899,18 @@ private fun EventTimelineItem(
                 color = PureBlack.copy(alpha = 0.42f),
                 fontFamily = FontFamily.Monospace,
             )
+            // «обычно ~$80» — вывод, не оценка (body-layer.md). Один серый,
+            // тише subtitle, БЕЗ форматирования вроде bold/акцента.
+            if (recurringHint != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = recurringHint,
+                    fontSize = 10.sp,
+                    letterSpacing = 1.sp,
+                    color = PureBlack.copy(alpha = 0.32f),
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
         }
         if (intentionState == null) {
             Text(

@@ -1,5 +1,6 @@
 package com.example.safespace.feature.expenses.di
 
+import com.example.safespace.core.domain.usecase.FindMatchingEventUseCase
 import com.example.safespace.feature.expenses.data.repository.ExpensesRepositoryImpl
 import com.example.safespace.feature.expenses.domain.repository.ExpensesRepository
 import com.example.safespace.feature.expenses.navigation.ExpensesEntryPoint
@@ -11,5 +12,8 @@ import org.koin.dsl.module
 val expensesModule = module {
     single<ExpensesEntryPoint> { ExpensesEntryPointImpl() }
     single<ExpensesRepository> { ExpensesRepositoryImpl(get()) }
-    viewModel { ExpensesViewModel(get(), get()) }
+    // Use case stateless — factory дёшев и явен; single тоже валиден,
+    // но factory снимает вопрос «делится ли этот use case состоянием».
+    factory { FindMatchingEventUseCase() }
+    viewModel { ExpensesViewModel(get(), get(), get(), get()) }
 }

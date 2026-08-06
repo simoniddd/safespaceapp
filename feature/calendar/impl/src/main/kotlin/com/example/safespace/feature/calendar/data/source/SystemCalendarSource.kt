@@ -30,12 +30,16 @@ class SystemCalendarSource(
             ContentUris.appendId(builder, endTimeMillis)
         }.build()
 
+        // Instances — view поверх Events, поэтому Events.RRULE читается без JOIN.
+        // EVENT_ID у recurring instances один и тот же — это и есть series id.
         val projection = arrayOf(
-            CalendarContract.Instances._ID,
-            CalendarContract.Instances.TITLE,
-            CalendarContract.Instances.BEGIN,
-            CalendarContract.Instances.END,
-            CalendarContract.Events.CALENDAR_ID,
+            CalendarContract.Instances._ID,          // 0 — id инстанса (per-occurrence)
+            CalendarContract.Instances.TITLE,        // 1
+            CalendarContract.Instances.BEGIN,        // 2
+            CalendarContract.Instances.END,          // 3
+            CalendarContract.Events.CALENDAR_ID,     // 4
+            CalendarContract.Instances.EVENT_ID,     // 5 — parent Events._ID (общий у серии)
+            CalendarContract.Events.RRULE,           // 6 — iCal recurrence rule; null = one-off
         )
 
         val cursor = try {
@@ -53,10 +57,17 @@ class SystemCalendarSource(
                 val begin = it.getLong(2)
                 val end = it.getLong(3)
                 val calendarId = it.getLong(4)
+                val parentEventId = it.getString(5)
+                val rrule = it.getString(6)
                 val durationMin = ((end - begin) / 60_000).toInt()
                 val timeString = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(begin))
                 val dateString = ""
                 val type = EventType.PERSONAL
+
+                // Recurring iff у события есть RRULE. EVENT_ID у одноразовых событий
+                // тоже валидный, но семантически «серии» нет — записываем null.
+                val recurringEventId =
+                    if (rrule.isNullOrBlank()) null else parentEventId
 
                 result.add(
                     CalendarEventItem(
@@ -68,6 +79,7 @@ class SystemCalendarSource(
                         calendarId = calendarId,
                         durationMin = durationMin,
                         type = type,
+                        recurringEventId = recurringEventId,
                     )
                 )
             }

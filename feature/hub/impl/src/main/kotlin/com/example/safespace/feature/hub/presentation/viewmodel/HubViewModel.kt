@@ -20,6 +20,7 @@ import com.example.safespace.feature.calendar.navigation.CalendarEntryPoint
 import com.example.safespace.feature.expenses.domain.repository.ExpensesRepository
 import com.example.safespace.feature.expenses.navigation.ExpensesEntryPoint
 import com.example.safespace.feature.hub.domain.interactor.BuildTimelineUseCase
+import com.example.safespace.feature.hub.domain.interactor.buildEventAggregates
 import com.example.safespace.feature.hub.presentation.state.HubState
 import com.example.safespace.feature.hub.presentation.state.PendingQuestion
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -75,10 +76,15 @@ class HubViewModel(
         }
     }
 
-    private val expensesWithWeather = combine(
+    // Мержим 3 expense-центричных Flow в один Triple, чтобы верхний combine
+    // остался в границах типизированной 5-арной перегрузки.
+    // «Обычно ~$80» — SQL агрегация в Room (двухуровневая GROUP BY, потом AVG).
+    // Reactive: новая трата с recurringEventId → Flow эмитит обновление.
+    private val expensesWeatherAverages = combine(
         expensesRepository.getAllExpenses(),
         weatherRepository.observeToday(),
-    ) { expenses, weather -> expenses to weather }
+        expensesRepository.observeRecurringSeriesAverages(),
+    ) { expenses, weather, averages -> Triple(expenses, weather, averages) }
 
     private val intentionsFlow = combine(
         intentionRepository.observeIntentions(),
@@ -87,12 +93,13 @@ class HubViewModel(
 
     @OptIn(ExperimentalTime::class)
     val uiState: StateFlow<HubState> = combine(
-        expensesWithWeather,
+        expensesWeatherAverages,
         systemEventsFlow,
         calendarSource.hiddenCalendarIds,
         intentionsFlow,
         healthFlow,
-    ) { expenses, events, hiddenIds, intentionsPair, healthState ->
+    ) { expenseTriple, events, hiddenIds, intentionsPair, healthState ->
+        val (expenses, weatherIcon, recurringAverages) = expenseTriple
         val (intentions, doneCounts) = intentionsPair
 
         val filteredEvents = if (hiddenIds.isEmpty()) events
@@ -111,10 +118,13 @@ class HubViewModel(
         val pendingEvent =
             eventsWithState.firstOrNull { it.intentionState == IntentionState.PENDING }
 
+        // In-memory: сумма трат + длительность + подмешанное recurring-avg per event.
+        val aggregates = buildEventAggregates(expenses, eventsWithState, recurringAverages)
+
         HubState(
             isLoading = false,
-            dailyExpenses = expenses.first.sumOf { it.amount },
-            timelineItems = buildTimeLine(expenses.first, eventsWithState, steps, sleep, exercises),
+            dailyExpenses = expenses.sumOf { it.amount },
+            timelineItems = buildTimeLine(expenses, eventsWithState, steps, sleep, exercises),
             pendingQuestion = pendingEvent?.let {
                 PendingQuestion.IntentionCheck(
                     eventId = it.id,
@@ -123,8 +133,9 @@ class HubViewModel(
                 )
             },
             doneCountByEventId = doneCounts,
-            todayIcon = expenses.second,
+            todayIcon = weatherIcon,
             healthState = healthState,
+            eventAggregates = aggregates,
         )
     }.stateIn(
         scope = viewModelScope,

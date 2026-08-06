@@ -48,6 +48,21 @@ sealed interface PendingQuestion {
     ) : PendingQuestion
 }
 
+/**
+ * Свёрнутая сводка события с привязанными тратами:
+ *  totalExpense — сумма трат с eventId == этого события ($46)
+ *  expenseCount — сколько трат привязано (для «· 3 траты» в свёрнутом виде)
+ *  durationHours — длительность события (4ч)
+ *  recurringAverage — среднее по прошлым инстансам этой же серии, если событие
+ *                     recurring; null для one-off — «обычно ~$80» не показывается.
+ */
+data class EventAggregate(
+    val totalExpense: Double,
+    val expenseCount: Int,
+    val durationHours: Double,
+    val recurringAverage: Double? = null,
+)
+
 data class HubState(
     val isLoading: Boolean = true,
     val dailyExpenses: Double = 0.0,
@@ -58,4 +73,7 @@ data class HubState(
     val pendingQuestion: PendingQuestion? = null,
     val doneCountByEventId: Map<String, Int> = emptyMap(),
     val healthState: HealthState = HealthState.NotInstalled,
+    // Key = event.id → сводка для события. Отдельно от sealed HubTimelineItem
+    // (мета-правило: атрибут ≠ природа sealed-ветки).
+    val eventAggregates: Map<String, EventAggregate> = emptyMap(),
 )

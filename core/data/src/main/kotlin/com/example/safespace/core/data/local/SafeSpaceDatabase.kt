@@ -21,8 +21,8 @@ import com.example.safespace.core.data.local.entity.IntentionTagEntity
         IntentionTagEntity::class,
         IntentionConfirmationEntity::class,
         DayWeatherEntity::class],
-    version = 5,
-    exportSchema = false
+    version = 6,
+    exportSchema = true,
 )
 abstract class SafeSpaceDatabase : RoomDatabase() {
 
@@ -34,8 +34,8 @@ abstract class SafeSpaceDatabase : RoomDatabase() {
 
     companion object {
         val MIGRATION_4_5 = object : Migration(4, 5) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
                     """
             CREATE TABLE IF NOT EXISTS `day_weather` (
             `dateString` TEXT NOT NULL,
@@ -43,6 +43,17 @@ abstract class SafeSpaceDatabase : RoomDatabase() {
             PRIMARY KEY(`dateString`)
             )
             """.trimIndent()
+                )
+            }
+        }
+
+        // День 15 F-10 ч.2: снимок series id на трате, чтобы «обычно ~$80»
+        // считался одной SQL-агрегацией по колонке (без JOIN с календарём).
+        // Nullable → показ только для recurring, one-off не портит агрегат.
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE expenses_table ADD COLUMN recurringEventId TEXT"
                 )
             }
         }

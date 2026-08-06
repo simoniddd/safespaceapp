@@ -13,5 +13,7 @@ data class ExpenseEntity(
     val dateString: String,
     val timestamp: Long, // для правильной сортировки времени
     val eventId: String? = null,
-    val emotion: String? = null
+    val emotion: String? = null,
+    // Добавлено в MIGRATION_5_6.
+    val recurringEventId: String? = null,
 )
