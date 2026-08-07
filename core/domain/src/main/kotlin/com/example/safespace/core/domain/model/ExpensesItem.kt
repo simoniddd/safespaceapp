@@ -6,6 +6,7 @@ data class ExpensesItem(
     val description: String,
     val category: String,
     val dateString: String,
+    val timeStamp: Long,
     val eventId: String? = null,
     val emotion: Emotion? = null,
     // Снимок serial event id (recurring series) на момент линковки.

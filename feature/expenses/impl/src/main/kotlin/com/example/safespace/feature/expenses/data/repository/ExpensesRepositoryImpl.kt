@@ -26,6 +26,7 @@ internal class ExpensesRepositoryImpl(
                     eventId = entity.eventId,
                     emotion = entity.emotion?.let { Emotion.valueOf(it) },
                     recurringEventId = entity.recurringEventId,
+                    timeStamp = entity.timestamp
                 )
             }
         }
