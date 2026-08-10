@@ -31,14 +31,16 @@ class BuildTimelineUseCaseTest {
                 amount = 100.0,
                 description = "",
                 category = "",
-                dateString = "20:00"
+                dateString = "20:00",
+                timeStamp = 0L
             ),
             ExpensesItem(
                 id = "2",
                 amount = 50.0,
                 description = "",
                 category = "",
-                dateString = "10:00"
+                dateString = "10:00",
+                timeStamp = 0L
             )
         )
         val result = useCase(expenses, events, null, null, emptyList())
@@ -57,14 +59,16 @@ class BuildTimelineUseCaseTest {
             amount = 0.0,
             description = "",
             category = "",
-            dateString = "15:00"
+            dateString = "15:00",
+            timeStamp = 0L
         )
         val expense2 = ExpensesItem(
             id = "2",
             amount = 0.0,
             description = "",
             category = "",
-            dateString = "22:00"
+            dateString = "22:00",
+            timeStamp = 0L
         )
         val event1 = CalendarEventItem(
             id = "3",

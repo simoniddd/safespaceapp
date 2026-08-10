@@ -91,7 +91,8 @@ class HubViewModelTest {
             description = "TODO()",
             category = "TODO()",
             dateString = "TODO()",
-            eventId = "TODO()"
+            eventId = "TODO()",
+            timeStamp = 0L
         )
 
         vm.uiState.test {
@@ -114,7 +115,8 @@ class HubViewModelTest {
             description = "TODO()",
             category = "TODO()",
             dateString = "TODO()",
-            eventId = "TODO()"
+            eventId = "TODO()",
+            timeStamp = 0L
         )
         val someExpense2 = ExpensesItem(
             "3",
@@ -122,7 +124,8 @@ class HubViewModelTest {
             description = "TODO()",
             category = "TODO()",
             dateString = "TODO()",
-            eventId = "TODO()"
+            eventId = "TODO()",
+            timeStamp = 0L
         )
         val someEventA = CalendarEventItem(
             id = "2",
