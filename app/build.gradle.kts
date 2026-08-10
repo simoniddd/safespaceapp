@@ -9,7 +9,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.safespace"
+        applicationId = "io.github.simoniddd.safespace"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
