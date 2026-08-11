@@ -7,6 +7,16 @@
     <uses-permission android:name="android.permission.health.READ_SLEEP"/>
     <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
 
+    <service
+        android:name="notifications.KaspiNotificationLogger"
+        android:label="Kaspi Notification Logger"
+        android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.service.notification.NotificationListenerService" />
+        </intent-filter>
+    </service>
+
     <queries>
         <package android:name="com.google.android.apps.healthdata"/>
     </queries>
