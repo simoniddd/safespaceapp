@@ -19,5 +19,6 @@ android {
 dependencies {
     implementation(libs.koin.android)
     implementation(projects.core.data)
+    implementation(projects.core.domain)
     implementation(libs.room.runtime)
 }

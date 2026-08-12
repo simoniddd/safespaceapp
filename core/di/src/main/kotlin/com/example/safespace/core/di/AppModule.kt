@@ -1,8 +1,9 @@
 package com.example.safespace.core.di
 
 import androidx.room.Room
-import androidx.room.migration.Migration
 import com.example.safespace.core.data.local.SafeSpaceDatabase
+import com.example.safespace.core.data.notification.FreedomNotificationParser
+import com.example.safespace.core.domain.model.notification.BankNotificationParser
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -34,5 +35,8 @@ val appModule = module {
     }
     single {
         get<SafeSpaceDatabase>().weatherDao
+    }
+    factory<BankNotificationParser> {
+        FreedomNotificationParser()
     }
 }
