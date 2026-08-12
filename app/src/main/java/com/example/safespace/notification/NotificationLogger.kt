@@ -34,6 +34,13 @@ class NotificationLogger : NotificationListenerService() {
             postTime = sbn.postTime
         )
 
+        // TEMP: пишем сырой payload Kaspi в лог, пока KaspiNotificationParser не написан
+        // (нет outgoing-сэмплов, ждём естественного повода в течение дня).
+        // Удалить, когда парсер будет.
+        if (payload.packageName == KASPI_PACKAGE) {
+            Log.d(TAG, "KASPI_RAW title=${payload.title} | text=${payload.text} | bigText=${payload.bigText}")
+        }
+
         // Диспетчер просто спрашивает у списка, кто умеет это читать
         val parser = parsers.firstOrNull { it.canHandle(payload.packageName) } ?: return
 
@@ -47,5 +54,6 @@ class NotificationLogger : NotificationListenerService() {
 
     companion object {
         private const val TAG = "NL"
+        private const val KASPI_PACKAGE = "kz.kaspi.mobile"
     }
 }
