@@ -43,4 +43,7 @@ dependencies {
     androidTestImplementation(libs.room.testing)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.junit)
+
+    // JVM-юниты (парсеры, чистая Kotlin-логика — без эмулятора)
+    testImplementation(libs.junit)
 }
