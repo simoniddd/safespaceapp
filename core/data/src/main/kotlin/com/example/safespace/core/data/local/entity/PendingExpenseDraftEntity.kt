@@ -1,9 +1,16 @@
 package com.example.safespace.core.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "pending_expense_drafts")
+@Entity(
+    tableName = "pending_expense_drafts",
+    indices = [
+        Index(value = ["status"], name = "index_pending_expense_drafts_status"),
+        Index(value = ["dedupeKey"], name = "index_pending_expense_drafts_dedupeKey"),
+    ],
+)
 data class PendingExpenseDraftEntity(
     @PrimaryKey val id: String,
     val amount: Double,

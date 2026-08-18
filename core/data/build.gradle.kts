@@ -16,6 +16,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    // Room MigrationTestHelper читает схемы из assets тестового APK.
+    // Здесь подцепляем экспортированные schemas/ как assets только для androidTest.
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
 }
 
 // Экспорт схем Room (schemas/<version>.json) — нужен MigrationTestHelper
@@ -39,6 +45,7 @@ dependencies {
     androidTestImplementation(libs.room.testing)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 
     // JVM-юниты (парсеры, чистая Kotlin-логика — без эмулятора)
     testImplementation(libs.junit)
