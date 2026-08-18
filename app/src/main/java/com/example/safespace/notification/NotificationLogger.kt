@@ -38,10 +38,9 @@ class NotificationLogger : NotificationListenerService() {
 
         val expense = parser.parse(payload)
 
-        if (expense != null) {
-            Log.d(TAG, "🎉 Успешно словили расход: ${expense.amount} в ${expense.description}"
-            )
-        }
+        Log.d(
+            TAG, "🎉 Успешно словили расход: ${expense}"
+        )
     }
 
     companion object {

@@ -1,54 +1,67 @@
 package com.example.safespace.core.data.notification
 
-import com.example.safespace.core.domain.model.ExpensesItem
 import com.example.safespace.core.domain.model.notification.BankNotificationParser
 import com.example.safespace.core.domain.model.notification.NotificationPayload
-import java.util.UUID
+import com.example.safespace.core.domain.model.notification.ParseResult
+import com.example.safespace.core.domain.model.notification.ParsedTransaction
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
+@OptIn(ExperimentalTime::class)
 class FreedomNotificationParser : BankNotificationParser {
 
     override fun canHandle(packageName: String): Boolean =
         packageName == FREEDOM_PACKAGE
 
-    override fun parse(payload: NotificationPayload): ExpensesItem? {
-        val title = payload.title ?: return null
-        val text = payload.bigText ?: payload.text ?: return null
+    override fun parse(payload: NotificationPayload): ParseResult {
+        val title = payload.title ?: return ParseResult.Unrecognized("no title")
 
-        if (!title.startsWith(PURCHASE_PREFIX)) return null
+        if (!title.startsWith(PURCHASE_PREFIX)) {
+            return ParseResult.NotATransaction
+        }
+
+        val text = payload.bigText ?: payload.text
+        ?: return ParseResult.Unrecognized("no notification body")
 
         val merchant = title.removePrefix(PURCHASE_PREFIX).trim()
-        if (merchant.isEmpty()) return null
+        if (merchant.isEmpty())
+            return ParseResult.Unrecognized("empty merchant after 'Покупка ' prefix")
 
-        val amountLine = text.lineSequence().firstOrNull() ?: return null
-        if (!amountLine.startsWith("-")) return null
+        val amountLine =
+            text.lineSequence().firstOrNull() ?: return ParseResult.Unrecognized("empty body")
 
-        val amount = parseAmount(amountLine) ?: return null
+        if (!amountLine.startsWith("-")) return ParseResult.NotATransaction
 
-        return ExpensesItem(
-            id = UUID.randomUUID().toString(),
-            amount = amount,
-            description = merchant,
-            category = "",
-            dateString = "",
-            timeStamp = payload.postTime,
-            eventId = null,
-            emotion = null,
-            recurringEventId = null,
+        val parsed = parseAmount(amountLine)
+            ?: return ParseResult.Unrecognized("cannot parse amount: $amountLine")
+
+        return ParseResult.Success(
+            ParsedTransaction(
+                amount = parsed.amount,
+                currency = parsed.currency,
+                merchant = merchant,
+                occurredAt = Instant.fromEpochMilliseconds(payload.postTime),
+            )
         )
     }
 
-    private fun parseAmount(amountLine: String): Double? {
-        // KZ-формат "1 500,50 ₸": thousand separator = space или NBSP ( ), decimal = запятая
+    private fun parseAmount(amountLine: String): ParsedAmount? {
+        val currency = when {
+            amountLine.contains("₸") -> "KZT"
+            amountLine.contains("$") -> "USD"
+            else -> return null
+        }
         val cleaned = amountLine
             .removePrefix("-")
-            .replace("₸", "")
-            .replace(" ", "")
-            .replace(" ", "")
+            .replace("₸", "").replace("$", "")
+            .replace(" ", "").replace("\u00A0", "")
             .replace(",", ".")
             .trim()
-        return cleaned.toDoubleOrNull()
+        val amount = cleaned.toDoubleOrNull() ?: return null
+        return ParsedAmount(amount, currency)
     }
 
+    private data class ParsedAmount(val amount: Double, val currency: String)
     private companion object {
         const val FREEDOM_PACKAGE = "ffinbank.MyFreedom"
         const val PURCHASE_PREFIX = "Покупка "

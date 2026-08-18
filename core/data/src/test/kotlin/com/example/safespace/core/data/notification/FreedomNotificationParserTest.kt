@@ -1,9 +1,10 @@
 package com.example.safespace.core.data.notification
 
 import com.example.safespace.core.domain.model.notification.NotificationPayload
+import com.example.safespace.core.domain.model.notification.ParseResult
+import com.example.safespace.core.domain.model.notification.ParsedTransaction
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
-import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Test
 
@@ -25,6 +26,24 @@ class FreedomNotificationParserTest {
         postTime = postTime
     )
 
+    private fun ParseResult.expectSuccess(): ParsedTransaction {
+        assertTrue("Expected Success but was $this", this is ParseResult.Success)
+        return (this as ParseResult.Success).tx
+    }
+
+    private fun ParseResult.expectNotATransaction() {
+        assertEquals(ParseResult.NotATransaction, this)
+    }
+
+    private fun ParseResult.expectUnrecognized(reasonContains: String) {
+        assertTrue("Expected Unrecognized but was $this", this is ParseResult.Unrecognized)
+        val actual = (this as ParseResult.Unrecognized).reason
+        assertTrue(
+            "Expected reason to contain '$reasonContains' but was '$actual'",
+            actual.contains(reasonContains, ignoreCase = true)
+        )
+    }
+
     @Test
     fun `P1 - обычная покупка парсится в ExpenseItem`() {
         val payload = createPayload(
@@ -34,10 +53,11 @@ class FreedomNotificationParserTest {
                     "Дата: 17.08.2026 14:59",
         )
 
-        val result = parser.parse(payload)
+        val result = parser.parse(payload).expectSuccess()
 
-        assertEquals(1500.0, result?.amount)
-        assertEquals("Starbucks", result?.description)
+        assertEquals(1500.0, result.amount)
+        assertEquals("Starbucks", result.merchant)
+        assertEquals("KZT", result.currency)
     }
 
     @Test
@@ -48,10 +68,11 @@ class FreedomNotificationParserTest {
                     "Карта: *1234\n " +
                     "Дата: 17.08.2026 14:59",
         )
-        val result = parser.parse(payload)
+        val result = parser.parse(payload).expectSuccess()
 
-        assertEquals(12345.0, result?.amount)
-        assertEquals("Wildberries", result?.description)
+        assertEquals(12345.0, result.amount)
+        assertEquals("Wildberries", result.merchant)
+        assertEquals("KZT", result.currency)
     }
 
     @Test
@@ -62,10 +83,10 @@ class FreedomNotificationParserTest {
                     "Карта: *1234\n " +
                     "Дата: 17.08.2026 14:59",
         )
-        val result = parser.parse(payload)
+        val result = parser.parse(payload).expectSuccess()
 
-        assertEquals(500.0, result?.amount)
-        assertEquals("METRO", result?.description)
+        assertEquals(500.0, result.amount)
+        assertEquals("METRO", result.merchant)
     }
 
     @Test
@@ -78,10 +99,10 @@ class FreedomNotificationParserTest {
             bigText = null,
         )
 
-        val result = parser.parse(payload)
+        val result = parser.parse(payload).expectSuccess()
 
-        assertEquals(5240.0, result?.amount)
-        assertEquals("SMALL", result?.description)
+        assertEquals(5240.0, result.amount)
+        assertEquals("SMALL", result.merchant)
     }
 
     @Test
@@ -92,11 +113,10 @@ class FreedomNotificationParserTest {
                     "Карта: *1234\n " +
                     "Дата: 18.08.2026 17:23",
         )
-
-        val result = parser.parse(payload)
-
-        assertEquals("Coffee Boom Almaty", result?.description)
-        assertEquals(11230.0, result?.amount)
+        val result = parser.parse(payload).expectSuccess()
+        assertEquals(11230.0, result.amount)
+        assertEquals("Coffee Boom Almaty", result.merchant)
+        assertEquals("KZT", result.currency)
     }
 
     @Test
@@ -108,9 +128,7 @@ class FreedomNotificationParserTest {
                     "Дата: 18.08.2026 17:23",
         )
 
-        val result = parser.parse(payload)
-
-        assertNull(result)
+        parser.parse(payload).expectNotATransaction()
     }
 
     @Test
@@ -121,9 +139,7 @@ class FreedomNotificationParserTest {
                     "Карта: *1234\n " +
                     "Дата: 18.08.2026 11:33",
         )
-        val result = parser.parse(payload)
-
-        assertNull(result)
+        parser.parse(payload).expectNotATransaction()
     }
 
     @Test
@@ -131,8 +147,7 @@ class FreedomNotificationParserTest {
         val payload = createPayload(
             title = "Отель со скидкой 30% предлагаем только сегодня"
         )
-        val result = parser.parse(payload)
-        assertNull(result)
+        parser.parse(payload).expectNotATransaction()
     }
 
     @Test
@@ -144,15 +159,13 @@ class FreedomNotificationParserTest {
                     "Дата: 18.08.2026 13:21",
         )
 
-        val result = parser.parse(payload)
-        assertNull(result)
+        parser.parse(payload).expectUnrecognized("empty merchant")
     }
 
     @Test
     fun `N5 - без заголовка уведомления парсер не упадет`() {
         val payload = createPayload()
-        val result = parser.parse(payload)
-        assertNull(result)
+        parser.parse(payload).expectUnrecognized("no title")
     }
 
     @Test
@@ -160,8 +173,7 @@ class FreedomNotificationParserTest {
         val payload = createPayload(
             title = "Покупка Fist"
         )
-        val result = parser.parse(payload)
-        assertNull(result)
+        parser.parse(payload).expectUnrecognized("no notification body")
     }
 
     @Test
@@ -172,8 +184,7 @@ class FreedomNotificationParserTest {
                     "Карта: *1234\n " +
                     "Дата: 18.08.2026 13:31",
         )
-        val result = parser.parse(payload)
-        assertNull(result)
+        parser.parse(payload).expectNotATransaction()
     }
 
     @Test
@@ -184,8 +195,7 @@ class FreedomNotificationParserTest {
                     "Карта: *1234\n " +
                     "Дата: 18.08.2026 11:11",
         )
-        val result = parser.parse(payload)
-        assertNull(result)
+        parser.parse(payload).expectUnrecognized("cannot parse amount")
     }
 
     @Test
@@ -209,12 +219,11 @@ class FreedomNotificationParserTest {
     @Test
     fun `D1 - транзитивный перевод между счетами не считается расходом`() {
         val payload = createPayload(
-            text = "Перевод между своими счетами",
+            title = "Перевод между своими счетами",
             bigText = "+2,2 $\n " +
                     "Доступно 7,68 $\n" +
                     "Пополнено SuperCard **9608",
         )
-        val result = parser.parse(payload)
-        assertNull(result)
+        parser.parse(payload).expectNotATransaction()
     }
 }
