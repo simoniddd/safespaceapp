@@ -20,6 +20,7 @@ val appModule = module {
             .addMigrations(
                 SafeSpaceDatabase.MIGRATION_4_5,
                 SafeSpaceDatabase.MIGRATION_5_6,
+                SafeSpaceDatabase.MIGRATION_6_7,
             )
             .build()
     }
@@ -35,6 +36,9 @@ val appModule = module {
     }
     single {
         get<SafeSpaceDatabase>().weatherDao
+    }
+    single {
+        get<SafeSpaceDatabase>().pendingExpenseDraftDao
     }
     factory<BankNotificationParser> {
         FreedomNotificationParser()

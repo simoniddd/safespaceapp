@@ -31,11 +31,7 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     implementation(libs.health.connect)
-
-    // Koin для WorkManager
     implementation(libs.koin.androidx.workmanager)
-
-    // Сам AndroidX WorkManager
     implementation(libs.androidx.workmanager)
     ksp(libs.room.compiler)
 

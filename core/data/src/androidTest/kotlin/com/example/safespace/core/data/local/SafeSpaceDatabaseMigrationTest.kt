@@ -6,8 +6,10 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.example.safespace.core.data.local.SafeSpaceDatabase.Companion.MIGRATION_6_7
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -109,5 +111,30 @@ class SafeSpaceDatabaseMigrationTest {
             }
 
         roomDb.close()
+    }
+
+    @Test
+    fun migrate_6_to_7_creates_pending_drafts_table() {
+        // 1. Открыть БД в версии 6 с MigrationTestHelper
+        val dbV6 = helper.createDatabase(TEST_DB, 6)
+
+        // 2. Вставить legacy-строку в expenses_table (проверить что старые данные переживут)
+        dbV6.execSQL("""INSERT INTO expenses_table (id, amount, description, category, dateString, timestamp, eventId, emotion, recurringEventId) 
+                      VALUES ('legacy-1', 1000.0, 'Legacy expense', 'Food', '2026-08-18', 1000, null, null, null)""")
+        dbV6.close()
+
+        // 3. Реопен с миграцией 6→7
+        val dbV7 = helper.runMigrationsAndValidate(TEST_DB, 7, true, MIGRATION_6_7)
+
+        // 4. Проверить: старая строка на месте (миграция не деструктивная)
+        val cursor = dbV7.query("SELECT id FROM expenses_table WHERE id = 'legacy-1'")
+        assertTrue(cursor.moveToFirst())
+        cursor.close()
+
+        // 5. Проверить: pending_expense_drafts существует и пуста
+        val draftCursor = dbV7.query("SELECT COUNT(*) FROM pending_expense_drafts")
+        assertTrue(draftCursor.moveToFirst())
+        assertEquals(0, draftCursor.getInt(0))
+        draftCursor.close()
     }
 }
