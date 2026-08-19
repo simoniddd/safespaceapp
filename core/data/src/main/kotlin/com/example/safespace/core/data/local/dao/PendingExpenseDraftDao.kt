@@ -14,11 +14,14 @@ interface PendingExpenseDraftDao {
     fun observeNew(): Flow<List<PendingExpenseDraftEntity>>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(draft: PendingExpenseDraftEntity)
+    suspend fun insert(draft: PendingExpenseDraftEntity): Long
 
     @Query("UPDATE pending_expense_drafts SET status = :newStatus, linkedExpenseId = :linkedId WHERE id = :draftId")
     suspend fun updateStatus(draftId: String, newStatus: String, linkedId: String? = null)
 
     @Query("SELECT * FROM pending_expense_drafts WHERE dedupeKey = :key LIMIT 1")
     suspend fun findByDedupeKey(key: String): PendingExpenseDraftEntity?
+
+    @Query("SELECT * FROM pending_expense_drafts WHERE id = :draftId LIMIT 1")
+    suspend fun findById(draftId: String): PendingExpenseDraftEntity?
 }

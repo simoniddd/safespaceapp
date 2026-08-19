@@ -3,11 +3,13 @@ package com.example.safespace.core.data.di
 import androidx.health.connect.client.HealthConnectClient
 import com.example.safespace.core.data.repository.HealthRepositoryImpl
 import com.example.safespace.core.data.repository.IntentionRepositoryImpl
+import com.example.safespace.core.data.repository.PendingExpenseDraftRepositoryImpl
 import com.example.safespace.core.data.repository.WeatherRepositoryImpl
 import com.example.safespace.core.data.worker.IntentionSchedulerImpl
 import com.example.safespace.core.data.worker.IntentionWorker
 import com.example.safespace.core.domain.repository.HealthRepository
 import com.example.safespace.core.domain.repository.IntentionRepository
+import com.example.safespace.core.domain.repository.PendingExpenseDraftRepository
 import com.example.safespace.core.domain.repository.WeatherRepository
 import com.example.safespace.core.domain.worker.IntentionScheduler
 import org.koin.android.ext.koin.androidContext
@@ -19,6 +21,9 @@ val dataModule = module {
     single<IntentionScheduler> { IntentionSchedulerImpl(androidContext()) }
     worker { IntentionWorker(get(), get(), get()) }
     single<WeatherRepository> { WeatherRepositoryImpl(get()) }
+    single<PendingExpenseDraftRepository> {
+        PendingExpenseDraftRepositoryImpl(get(), get(), get())
+    }
     single<HealthRepository> {
         val client = try {
             HealthConnectClient.getOrCreate(androidContext())
