@@ -57,6 +57,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.safespace.core.domain.model.ExpenseCategory
+import com.example.safespace.core.domain.model.ExpenseConfirmation
 import com.example.safespace.core.domain.model.WeatherIcon
 import com.example.safespace.core.domain.model.health.HealthState
 import com.example.safespace.core.domain.state.IntentionState
@@ -73,9 +75,13 @@ import com.example.safespace.core.ui.theme.AppColors.PureBlack
 import com.example.safespace.core.ui.theme.AppColors.SandBackground
 import com.example.safespace.feature.hub.presentation.state.HubTimelineItem
 import com.example.safespace.feature.hub.presentation.state.PendingQuestion
+import com.example.safespace.feature.hub.presentation.util.formatAmount
 import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
 import org.koin.androidx.compose.koinViewModel
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
+@OptIn(ExperimentalTime::class)
 @Composable
 fun HubScreen(
     viewModel: HubViewModel = koinViewModel()
@@ -160,31 +166,56 @@ fun HubScreen(
                     )
                 }
                 val q = state.pendingQuestion
-                if (q is PendingQuestion.IntentionCheck) {
-                    QuestionCard(
-                        question = "«${q.eventTitle}» состоялась?",
-                        actions = listOf(
-                            QuestionAction("Да ✓") {
-                                viewModel.confirmIntention(
-                                    q.eventId,
-                                    q.instanceStart
-                                )
+                when (q) {
+                    is PendingQuestion.IntentionCheck -> {
+                        QuestionCard(
+                            question = "«${q.eventTitle}» состоялась?",
+                            actions = listOf(
+                                QuestionAction("Да ✓") {
+                                    viewModel.confirmIntention(q.eventId, q.instanceStart)
+                                },
+                                QuestionAction("Не сегодня") {
+                                    viewModel.skipIntention(q.eventId, q.instanceStart)
+                                },
+                            ),
+                            quietAction = QuestionAction("позже") {
+                                viewModel.postponeIntention(q.eventId, q.instanceStart)
                             },
-                            QuestionAction("Не сегодня") {
-                                viewModel.skipIntention(
-                                    q.eventId,
-                                    q.instanceStart
-                                )
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+
+                    is PendingQuestion.PendingExpenseCheck -> {
+                        QuestionCard(
+                            question = buildString {
+                                append(q.merchant ?: "Без описания")
+                                append(" · ")
+                                append(formatAmount(q.amount, q.currency))
+                                append(" — записать?")
                             },
-                        ),
-                        quietAction = QuestionAction("позже") {
-                            viewModel.postponeIntention(
-                                q.eventId,
-                                q.instanceStart
-                            )
-                        },
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
+                            actions = listOf(
+                                QuestionAction("Записать") {
+                                    viewModel.confirmPendingDraft(
+                                        q.draftId,
+                                        ExpenseConfirmation(
+                                            amount = q.amount,
+                                            merchant = q.merchant ?: "",
+                                            category = ExpenseCategory.OTHER, // TODO F-04: inferCategory(q.merchant)
+                                            occurredAt = Instant.fromEpochMilliseconds(q.occurredAt),
+                                            note = "",
+                                        )
+                                    )
+                                },
+                                QuestionAction("Не трата") {
+                                    viewModel.dismissPendingDraft(q.draftId)
+                                },
+                            ),
+                            // quietAction = null — факт со счёта нельзя «отложить»
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+
+                    null -> Unit
                 }
                 TimelineSection(
                     items = state.timelineItems,
