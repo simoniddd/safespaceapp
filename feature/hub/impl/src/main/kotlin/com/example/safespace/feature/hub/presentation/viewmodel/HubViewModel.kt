@@ -2,12 +2,16 @@ package com.example.safespace.feature.hub.presentation.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import com.example.safespace.core.domain.model.CalendarEventItem
+import com.example.safespace.core.domain.model.ExpenseConfirmation
+import com.example.safespace.core.domain.model.ExpensesItem
+import com.example.safespace.core.domain.model.PendingExpenseDraft
 import com.example.safespace.core.domain.model.WeatherIcon
 import com.example.safespace.core.domain.model.health.DailySteps
 import com.example.safespace.core.domain.model.health.HealthDataType
 import com.example.safespace.core.domain.model.health.HealthState
 import com.example.safespace.core.domain.repository.HealthRepository
 import com.example.safespace.core.domain.repository.IntentionRepository
+import com.example.safespace.core.domain.repository.PendingExpenseDraftRepository
 import com.example.safespace.core.domain.repository.WeatherRepository
 import com.example.safespace.core.domain.source.EventsSource
 import com.example.safespace.core.domain.state.IntentionState
@@ -49,6 +53,7 @@ class HubViewModel(
     private val intentionScheduler: IntentionScheduler,
     private val weatherRepository: WeatherRepository,
     private val healthRepository: HealthRepository,
+    private val pendingExpenseDraftRepository: PendingExpenseDraftRepository,
     private val autoConfirmIntentionsUseCase: AutoConfirmIntentionsUseCase,
     navigator: Navigator,
 ) : StatefulViewModel<HubState>(HubState(), navigator) {
@@ -63,10 +68,9 @@ class HubViewModel(
         healthRepository.permissionsFor(HealthDataType.entries.toSet())
 
     @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
-    private val systemEventsFlow: Flow<List<CalendarEventItem>> =
-        _refreshTrigger.flatMapLatest {
-            flow { emit(eventsSource.getEventsForDate(Clock.System.todayIn(TimeZone.currentSystemDefault()))) }
-        }
+    private val systemEventsFlow: Flow<List<CalendarEventItem>> = _refreshTrigger.flatMapLatest {
+        flow { emit(eventsSource.getEventsForDate(Clock.System.todayIn(TimeZone.currentSystemDefault()))) }
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
     private val healthFlow: Flow<HealthState> = _refreshTrigger.flatMapLatest {
@@ -76,15 +80,21 @@ class HubViewModel(
         }
     }
 
-    // Мержим 3 expense-центричных Flow в один Triple, чтобы верхний combine
-    // остался в границах типизированной 5-арной перегрузки.
-    // «Обычно ~$80» — SQL агрегация в Room (двухуровневая GROUP BY, потом AVG).
-    // Reactive: новая трата с recurringEventId → Flow эмитит обновление.
-    private val expensesWeatherAverages = combine(
+    private data class ExpensesBundle(
+        val expenses: List<ExpensesItem>,
+        val weather: WeatherIcon?,
+        val recurringAverages: Map<String, Double>,
+        val pendingDrafts: List<PendingExpenseDraft>,
+    )
+
+    private val expensesBundle = combine(
         expensesRepository.getAllExpenses(),
         weatherRepository.observeToday(),
         expensesRepository.observeRecurringSeriesAverages(),
-    ) { expenses, weather, averages -> Triple(expenses, weather, averages) }
+        pendingExpenseDraftRepository.observeNew(),
+    ) { expenses, weather, averages, drafts ->
+        ExpensesBundle(expenses, weather, averages, drafts)
+    }
 
     private val intentionsFlow = combine(
         intentionRepository.observeIntentions(),
@@ -93,13 +103,13 @@ class HubViewModel(
 
     @OptIn(ExperimentalTime::class)
     val uiState: StateFlow<HubState> = combine(
-        expensesWeatherAverages,
+        expensesBundle,
         systemEventsFlow,
         calendarSource.hiddenCalendarIds,
         intentionsFlow,
         healthFlow,
-    ) { expenseTriple, events, hiddenIds, intentionsPair, healthState ->
-        val (expenses, weatherIcon, recurringAverages) = expenseTriple
+    ) { bundle, events, hiddenIds, intentionsPair, healthState ->
+        val (expenses, weatherIcon, recurringAverages, pendingDrafts) = bundle
         val (intentions, doneCounts) = intentionsPair
 
         val filteredEvents = if (hiddenIds.isEmpty()) events
@@ -115,9 +125,6 @@ class HubViewModel(
         val sleep = available?.sleep
         val exercises = available?.exercises.orEmpty()
 
-        val pendingEvent =
-            eventsWithState.firstOrNull { it.intentionState == IntentionState.PENDING }
-
         // In-memory: сумма трат + длительность + подмешанное recurring-avg per event.
         val aggregates = buildEventAggregates(expenses, eventsWithState, recurringAverages)
 
@@ -125,13 +132,7 @@ class HubViewModel(
             isLoading = false,
             dailyExpenses = expenses.sumOf { it.amount },
             timelineItems = buildTimeLine(expenses, eventsWithState, steps, sleep, exercises),
-            pendingQuestion = pendingEvent?.let {
-                PendingQuestion.IntentionCheck(
-                    eventId = it.id,
-                    instanceStart = it.timeStamp,
-                    eventTitle = it.title,
-                )
-            },
+            pendingQuestion = resolvePendingQuestion(pendingDrafts, eventsWithState),
             doneCountByEventId = doneCounts,
             todayIcon = weatherIcon,
             healthState = healthState,
@@ -159,6 +160,29 @@ class HubViewModel(
     private fun observeAutoConfirmations() {
         viewModelScope.launch {
             _refreshTrigger.collect { runAutoConfirm() }
+        }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    private fun resolvePendingQuestion(
+        drafts: List<PendingExpenseDraft>, eventsWithState: List<CalendarEventItem>
+    ): PendingQuestion? {
+        val topDraft = drafts.firstOrNull()
+        return when {
+            topDraft != null -> PendingQuestion.PendingExpenseCheck(
+                draftId = topDraft.id,
+                amount = topDraft.amount,
+                currency = topDraft.currency,
+                merchant = topDraft.merchant,
+                occurredAt = topDraft.occurredAt.toEpochMilliseconds(),
+            )
+
+            else -> eventsWithState.firstOrNull { it.intentionState == IntentionState.PENDING }
+                ?.let {
+                    PendingQuestion.IntentionCheck(
+                        eventId = it.id, instanceStart = it.timeStamp, eventTitle = it.title
+                    )
+                }
         }
     }
 
@@ -228,7 +252,21 @@ class HubViewModel(
     @OptIn(ExperimentalTime::class)
     fun saveWeather(icon: WeatherIcon) {
         viewModelScope.launch {
-            weatherRepository.saveWeather(Clock.System.todayIn(TimeZone.currentSystemDefault()), icon)
+            weatherRepository.saveWeather(
+                Clock.System.todayIn(TimeZone.currentSystemDefault()), icon
+            )
+        }
+    }
+
+    fun confirmPendingDraft(draftId: String, confirmation: ExpenseConfirmation) {
+        viewModelScope.launch {
+            pendingExpenseDraftRepository.confirm(draftId, confirmation)
+        }
+    }
+
+    fun dismissPendingDraft(draftId: String) {
+        viewModelScope.launch {
+            pendingExpenseDraftRepository.dismiss(draftId)
         }
     }
 }

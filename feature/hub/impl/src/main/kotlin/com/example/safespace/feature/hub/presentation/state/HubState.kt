@@ -46,6 +46,13 @@ sealed interface PendingQuestion {
         val instanceStart: Long,
         val eventTitle: String,
     ) : PendingQuestion
+    data class PendingExpenseCheck(
+        val draftId: String,
+        val amount: Double,
+        val currency: String,
+        val merchant: String?,
+        val occurredAt: Long
+    ): PendingQuestion
 }
 
 /**

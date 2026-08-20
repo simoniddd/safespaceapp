@@ -16,6 +16,7 @@ import com.example.safespace.feature.hub.fake.FakeIntentionRepository
 import com.example.safespace.feature.hub.fake.FakeHealthRepository
 import com.example.safespace.feature.hub.fake.FakeIntentionScheduler
 import com.example.safespace.feature.hub.fake.FakeNavigator
+import com.example.safespace.feature.hub.fake.FakePendingExpenseDraftRepository
 import com.example.safespace.feature.hub.fake.FakeWeatherRepository
 import com.example.safespace.feature.hub.presentation.state.HubTimelineItem
 import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
@@ -65,6 +66,7 @@ class HubViewModelTest {
         intentionScheduler = FakeIntentionScheduler(),
         weatherRepository = FakeWeatherRepository(),
         healthRepository = FakeHealthRepository(),
+        pendingExpenseDraftRepository = FakePendingExpenseDraftRepository(),
         autoConfirmIntentionsUseCase = AutoConfirmIntentionsUseCase(),
         navigator = FakeNavigator(),
     )
