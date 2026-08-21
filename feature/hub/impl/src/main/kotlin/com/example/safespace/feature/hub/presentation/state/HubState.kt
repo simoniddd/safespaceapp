@@ -46,13 +46,14 @@ sealed interface PendingQuestion {
         val instanceStart: Long,
         val eventTitle: String,
     ) : PendingQuestion
+
     data class PendingExpenseCheck(
         val draftId: String,
         val amount: Double,
         val currency: String,
         val merchant: String?,
         val occurredAt: Long
-    ): PendingQuestion
+    ) : PendingQuestion
 }
 
 /**
@@ -80,7 +81,5 @@ data class HubState(
     val pendingQuestion: PendingQuestion? = null,
     val doneCountByEventId: Map<String, Int> = emptyMap(),
     val healthState: HealthState = HealthState.NotInstalled,
-    // Key = event.id → сводка для события. Отдельно от sealed HubTimelineItem
-    // (мета-правило: атрибут ≠ природа sealed-ветки).
     val eventAggregates: Map<String, EventAggregate> = emptyMap(),
 )

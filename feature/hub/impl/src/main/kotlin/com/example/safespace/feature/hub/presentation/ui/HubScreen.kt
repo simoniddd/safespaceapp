@@ -115,12 +115,6 @@ fun HubScreen(
         }
     }
 
-    // repeatOnLifecycle(STARTED) — канонический паттерн: тело запускается когда
-    // владелец достигает STARTED, отменяется при уходе ниже. Здесь refresh() —
-    // fire-and-forget, поэтому тело завершается сразу; при следующем STOP→START
-    // repeatOnLifecycle запустит блок заново. Ручной LifecycleEventObserver с
-    // ON_RESUME/onDispose даёт тот же эффект, но требует ручного управления
-    // подпиской — repeatOnLifecycle делает это через structured concurrency.
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -157,9 +151,6 @@ fun HubScreen(
                 Spacer(modifier = Modifier.height(14.dp))
                 EcosystemWidgets()
                 Spacer(modifier = Modifier.height(26.dp))
-                // NotInstalled → тихо (Закон 1: пустой день ≠ упрёк).
-                // NoPermission → призрачный блок-приглашение.
-                // Available → блоки рендерятся внутри TimelineSection.
                 if (state.healthState is HealthState.NoPermission) {
                     HealthConnectGhostBlock(
                         onClick = { healthLauncher.launch(viewModel.healthPermissions) }
@@ -210,7 +201,6 @@ fun HubScreen(
                                     viewModel.dismissPendingDraft(q.draftId)
                                 },
                             ),
-                            // quietAction = null — факт со счёта нельзя «отложить»
                         )
                         Spacer(modifier = Modifier.height(14.dp))
                     }
@@ -288,7 +278,7 @@ private fun FinancialAnchorCard(
     onClick: () -> Unit
 ) {
     // 1. Математика прогресса
-    val remaining = (limit - spent).coerceAtLeast(0.0) // Чтобы не уходило в минус
+    val remaining = (limit - spent).coerceAtLeast(0.0)
     val progress = (spent / limit).coerceIn(0.0, 1.0)
     val progressPercent = (progress * 100).toInt()
 

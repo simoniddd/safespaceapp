@@ -61,9 +61,6 @@ class HubViewModel(
     private val _refreshTrigger = MutableSharedFlow<Unit>(replay = 1)
     private val buildTimeLine = BuildTimelineUseCase()
 
-    // Атомарный набор: у UI один launcher, просит сразу три типа.
-    // Модель уже поддерживает per-type грануляцию (NoPermission.toRequest),
-    // так что переход на «частичное присутствие» не потребует ломки VM.
     val healthPermissions: Set<String> =
         healthRepository.permissionsFor(HealthDataType.entries.toSet())
 
@@ -148,15 +145,6 @@ class HubViewModel(
         refresh()
         observeAutoConfirmations()
     }
-
-    // Автоподтверждение намерения при ExerciseSession в окне события.
-    // Отдельный collector, а НЕ внутри combine uiState: combine — про построение
-    // презентационного состояния (чистая трансформация), а updateStatus — сайд-эффект
-    // (пишет в БД). Смешивать нельзя: (1) combine потерял бы чистоту, (2) uiState стал бы
-    // eager при подписке из VM, ломая тесты с ленивым setEvents().
-    // Триггер — тот же _refreshTrigger, что кормит uiState. Двойное чтение Health/Events
-    // за refresh — плата за развязку. Достаточно: реальный refresh случается на
-    // ON_RESUME + вручную; между ними Health-данные всё равно не меняются.
     private fun observeAutoConfirmations() {
         viewModelScope.launch {
             _refreshTrigger.collect { runAutoConfirm() }
