@@ -76,6 +76,7 @@ import com.example.safespace.core.ui.theme.AppColors.SandBackground
 import com.example.safespace.feature.hub.presentation.state.HubTimelineItem
 import com.example.safespace.feature.hub.presentation.state.PendingQuestion
 import com.example.safespace.feature.hub.presentation.util.formatAmount
+import com.example.safespace.feature.hub.presentation.util.formatTime
 import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
 import org.koin.androidx.compose.koinViewModel
 import kotlin.time.ExperimentalTime
@@ -89,8 +90,6 @@ fun HubScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
-
-    val dailyLimit = 600.0
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -145,7 +144,6 @@ fun HubScreen(
                 Spacer(modifier = Modifier.height(20.dp))
                 FinancialAnchorCard(
                     spent = state.dailyExpenses,
-                    limit = dailyLimit,
                     onClick = viewModel::onExpensesClicked
                 )
                 Spacer(modifier = Modifier.height(14.dp))
@@ -274,15 +272,8 @@ private fun HubHeader(
 @Composable
 private fun FinancialAnchorCard(
     spent: Double,
-    limit: Double,
     onClick: () -> Unit
 ) {
-    // 1. Математика прогресса
-    val remaining = (limit - spent).coerceAtLeast(0.0)
-    val progress = (spent / limit).coerceIn(0.0, 1.0)
-    val progressPercent = (progress * 100).toInt()
-
-    // 2. Форматируем сумму для крупного шрифта (бьем на целые и сотые)
     val spentFormatted = "%.2f".format(spent).split(".")
     val spentMain = spentFormatted.getOrElse(0) { "0" }
     val spentDecimals = spentFormatted.getOrElse(1) { "00" }
@@ -334,86 +325,7 @@ private fun FinancialAnchorCard(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
         }
-
-        Text(
-            text = "$${"%.2f".format(remaining)} до лимита · limit $${"%.2f".format(limit)}",
-            fontSize = 10.sp,
-            letterSpacing = 0.5.sp,
-            color = Color.White.copy(alpha = 0.4f),
-            fontFamily = FontFamily.Monospace
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Чипы категорий
-        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            FinanceCategoryChip("Еда · $180")
-            FinanceCategoryChip("Транспорт · $85")
-            FinanceCategoryChip("Разное · $155")
-        }
-
         Spacer(modifier = Modifier.height(18.dp))
-
-        // Прогресс бар
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(11.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color.White.copy(alpha = 0.1f))
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(progress.toFloat())
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(
-                                Color(0xFFD4CC00),
-                                NeonYellow,
-                                Color(0xFFFFFFC8).copy(alpha = 0.5f)
-                            )
-                        )
-                    )
-            )
-        }
-
-        Spacer(modifier = Modifier.height(9.dp))
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(
-                "${progressPercent}",
-                fontSize = 10.sp,
-                color = Color.White.copy(alpha = 0.4f),
-                fontFamily = FontFamily.Monospace
-            )
-            Text(
-                "$${"%.2f".format(limit)} лимит",
-                fontSize = 10.sp,
-                color = NeonYellow.copy(alpha = 0.7f),
-                fontFamily = FontFamily.Monospace
-            )
-        }
-    }
-}
-
-@Composable
-private fun FinanceCategoryChip(text: String) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(NeonYellow.copy(alpha = 0.14f))
-            .border(1.dp, NeonYellow.copy(alpha = 0.28f), RoundedCornerShape(20.dp))
-            .padding(horizontal = 11.dp, vertical = 5.dp)
-    ) {
-        Text(
-            text = text,
-            fontSize = 10.sp,
-            color = NeonYellow.copy(alpha = 0.8f),
-            letterSpacing = 0.5.sp,
-            fontFamily = FontFamily.Monospace
-        )
     }
 }
 
@@ -732,9 +644,9 @@ private fun TimelineSection(
                                 val linkedMark = if (expense.eventId != null) "📎 " else ""
                                 TimelineItem(
                                     dotColor = CoralRed,
-                                    time = expense.dateString,
+                                    time = formatTime(expense.timeStamp),
                                     title = expense.description,
-                                    subtitle = "$linkedMark${expense.category.uppercase()} · -$${expense.amount}",
+                                    subtitle = "$linkedMark${expense.category.uppercase()} · -${formatAmount(expense.amount, "KZT")}",
                                     isPast = true
                                 )
                             }
