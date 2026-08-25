@@ -17,6 +17,8 @@ android {
 dependencies {
     api(platform(libs.androidx.compose.bom))
     implementation(projects.core.domain)
+    implementation(libs.androidx.compose.ui.text.google.fonts)
+    implementation(libs.play.services.basement)
     api(libs.androidx.compose.material3)
     api(libs.androidx.compose.ui)
     api(libs.androidx.compose.material.icons.extended)
