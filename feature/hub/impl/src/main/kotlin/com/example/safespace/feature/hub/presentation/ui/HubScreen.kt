@@ -52,7 +52,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.health.connect.client.PermissionController
-
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -66,13 +65,14 @@ import com.example.safespace.core.ui.components.QuestionAction
 import com.example.safespace.core.ui.components.QuestionCard
 import com.example.safespace.core.ui.components.SourceStamp
 import com.example.safespace.core.ui.components.toSourceLabel
+import com.example.safespace.core.ui.preview.PreviewTheme
 import com.example.safespace.core.ui.theme.AppColors
-import com.example.safespace.core.ui.theme.BodyDigitStyle
 import com.example.safespace.core.ui.theme.AppColors.CoralRed
 import com.example.safespace.core.ui.theme.AppColors.ElectricBlue
 import com.example.safespace.core.ui.theme.AppColors.NeonYellow
 import com.example.safespace.core.ui.theme.AppColors.PureBlack
 import com.example.safespace.core.ui.theme.AppColors.SandBackground
+import com.example.safespace.core.ui.theme.SafeSpaceType
 import com.example.safespace.feature.hub.presentation.state.HubTimelineItem
 import com.example.safespace.feature.hub.presentation.state.PendingQuestion
 import com.example.safespace.feature.hub.presentation.util.formatAmount
@@ -646,7 +646,12 @@ private fun TimelineSection(
                                     dotColor = CoralRed,
                                     time = formatTime(expense.timeStamp),
                                     title = expense.description,
-                                    subtitle = "$linkedMark${expense.category.uppercase()} · -${formatAmount(expense.amount, "KZT")}",
+                                    subtitle = "$linkedMark${expense.category.uppercase()} · -${
+                                        formatAmount(
+                                            expense.amount,
+                                            "KZT"
+                                        )
+                                    }",
                                     isPast = true
                                 )
                             }
@@ -657,11 +662,14 @@ private fun TimelineSection(
                                 val baseSubtitle = "${event.type.name} · ${event.durationMin} мин"
                                 // «· 3 траты · $46 · 4ч» — свёрнутая сводка per body-layer.md.
                                 // Показываем только если траты привязаны, иначе шум.
-                                val extendedSubtitle = if (aggregate != null && aggregate.expenseCount > 0) {
-                                    val sum = "%.0f".format(aggregate.totalExpense)
-                                    val hours = "%.1f".format(aggregate.durationHours).trimEnd('0').trimEnd('.')
-                                    "$baseSubtitle · ${aggregate.expenseCount} тр · \$$sum · ${hours}ч"
-                                } else baseSubtitle
+                                val extendedSubtitle =
+                                    if (aggregate != null && aggregate.expenseCount > 0) {
+                                        val sum = "%.0f".format(aggregate.totalExpense)
+                                        val hours =
+                                            "%.1f".format(aggregate.durationHours).trimEnd('0')
+                                                .trimEnd('.')
+                                        "$baseSubtitle · ${aggregate.expenseCount} тр · \$$sum · ${hours}ч"
+                                    } else baseSubtitle
                                 val recurringHint = aggregate?.recurringAverage?.let {
                                     "обычно ~\$${"%.0f".format(it)}"
                                 }
@@ -1037,11 +1045,13 @@ private fun HealthTimelineItem(
         SourceStamp(label = sourceLabel)
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 Text(
                     text = primary,
-                    style = BodyDigitStyle,
-                    color = AppColors.BodyDigit,
+                    style = SafeSpaceType.healthDigit
                 )
                 if (hint != null) {
                     Text(
@@ -1064,8 +1074,7 @@ private fun HealthTimelineItem(
         if (time != null) {
             Text(
                 text = time,
-                style = BodyDigitStyle,
-                color = AppColors.BodySubtitle,
+                style = SafeSpaceType.healthDigit
             )
         }
     }
@@ -1087,5 +1096,7 @@ private fun formatSteps(count: Int): String =
 @Preview(showBackground = true)
 @Composable
 fun HubScreenLiquidGlassPreview() {
-    HubScreen()
+    PreviewTheme {
+        HubScreen()
+    }
 }

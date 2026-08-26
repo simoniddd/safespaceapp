@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.example.safespace.core.ui.theme.AppColors
-import com.example.safespace.core.ui.theme.SourceStampStyle
+import com.example.safespace.core.ui.theme.SafeSpaceType
 
 /**
  * Круглая «печать источника» для Health-жанра: 26dp, короткий лейбл капителью.
@@ -30,8 +30,7 @@ fun SourceStamp(
     ) {
         Text(
             text = label.uppercase().take(4),
-            style = SourceStampStyle,
-            color = AppColors.SourceStampText,
+            style = SafeSpaceType.sourceStamp
         )
     }
 }
