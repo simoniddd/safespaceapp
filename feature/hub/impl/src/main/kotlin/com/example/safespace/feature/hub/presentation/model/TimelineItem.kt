@@ -11,4 +11,10 @@ sealed interface TimelineItem {
         val title: String,
         val digit: String,
     ): TimelineItem
+
+    data class Expense(
+        override val time: LocalTime,
+        val title: String,
+        val amount: Long,
+    ): TimelineItem
 }
