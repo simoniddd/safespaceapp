@@ -23,7 +23,6 @@ import com.example.safespace.core.ui.preview.PreviewTheme
 import com.example.safespace.core.ui.theme.SafeSpaceTokens
 import com.example.safespace.core.ui.theme.SafeSpaceType
 import com.example.safespace.feature.hub.presentation.model.TimelineItem
-import kotlinx.datetime.LocalTime
 
 @Composable
 fun HealthDigitRow(
@@ -77,7 +76,7 @@ private fun HealthDigitRowPreview() {
     PreviewTheme {
         HealthDigitRow(
             item = TimelineItem.HealthDigit(
-                time = LocalTime(7, 30),
+                sortKey = 0L,
                 icon = "😴",
                 title = "Сон",
                 digit = "7ч 24м",

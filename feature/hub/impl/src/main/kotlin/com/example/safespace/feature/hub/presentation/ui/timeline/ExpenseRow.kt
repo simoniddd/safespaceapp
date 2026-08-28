@@ -24,7 +24,6 @@ import com.example.safespace.core.ui.preview.PreviewTheme
 import com.example.safespace.core.ui.theme.SafeSpaceTokens
 import com.example.safespace.core.ui.theme.SafeSpaceType
 import com.example.safespace.feature.hub.presentation.model.TimelineItem
-import kotlinx.datetime.LocalTime
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -37,7 +36,7 @@ fun ExpenseRow(
         modifier = modifier,
         gutter = {
             Text(
-                text = formatGutterTime(item.time),
+                text = item.time,
                 style = SafeSpaceType.timeGutter,
                 textAlign = TextAlign.End,
                 modifier = Modifier
@@ -76,12 +75,6 @@ fun ExpenseRow(
     )
 }
 
-private fun formatGutterTime(time: LocalTime): String {
-    val h = time.hour.toString().padStart(2, '0')
-    val m = time.minute.toString().padStart(2, '0')
-    return "$h:$m"
-}
-
 private val amountFormatter: NumberFormat by lazy {
     NumberFormat.getIntegerInstance(Locale("ru", "KZ"))
 }
@@ -96,7 +89,8 @@ private fun ExpenseRowPreview() {
     PreviewTheme {
         ExpenseRow(
             item = TimelineItem.Expense(
-                time = LocalTime(8, 15),
+                sortKey = 0L,
+                time = "20:30",
                 title = "Кофе",
                 amount = 1250,
             )

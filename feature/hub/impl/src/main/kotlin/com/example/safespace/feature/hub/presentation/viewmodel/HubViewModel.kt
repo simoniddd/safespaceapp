@@ -23,8 +23,8 @@ import com.example.safespace.feature.calendar.domain.source.CalendarSource
 import com.example.safespace.feature.calendar.navigation.CalendarEntryPoint
 import com.example.safespace.feature.expenses.domain.repository.ExpensesRepository
 import com.example.safespace.feature.expenses.navigation.ExpensesEntryPoint
-import com.example.safespace.feature.hub.domain.interactor.BuildTimelineUseCase
-import com.example.safespace.feature.hub.domain.interactor.buildEventAggregates
+import com.example.safespace.feature.hub.presentation.mapper.TimelineMapper
+import com.example.safespace.feature.hub.presentation.mapper.buildEventAggregates
 import com.example.safespace.feature.hub.presentation.state.HubState
 import com.example.safespace.feature.hub.presentation.state.PendingQuestion
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -59,7 +59,7 @@ class HubViewModel(
 ) : StatefulViewModel<HubState>(HubState(), navigator) {
 
     private val _refreshTrigger = MutableSharedFlow<Unit>(replay = 1)
-    private val buildTimeLine = BuildTimelineUseCase()
+    private val timelineMapper = TimelineMapper()
 
     val healthPermissions: Set<String> =
         healthRepository.permissionsFor(HealthDataType.entries.toSet())
@@ -118,8 +118,8 @@ class HubViewModel(
 
         val available = (healthState as? HealthState.Available)?.data
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val steps = available?.steps?.let { DailySteps(count = it, date = today) }
         val sleep = available?.sleep
+        val steps = available?.steps?.let { DailySteps(count = it, date = today) }
         val exercises = available?.exercises.orEmpty()
 
         // In-memory: сумма трат + длительность + подмешанное recurring-avg per event.
@@ -128,12 +128,18 @@ class HubViewModel(
         HubState(
             isLoading = false,
             dailyExpenses = expenses.sumOf { it.amount },
-            timelineItems = buildTimeLine(expenses, eventsWithState, steps, sleep, exercises),
+            timelineItems = timelineMapper(
+                expenses = expenses,
+                events = eventsWithState,
+                eventAggregates = aggregates,
+                doneCountByEventId = doneCounts,
+                sleep = sleep,
+                steps = steps,
+                exercises = exercises
+            ),
             pendingQuestion = resolvePendingQuestion(pendingDrafts, eventsWithState),
-            doneCountByEventId = doneCounts,
             todayIcon = weatherIcon,
             healthState = healthState,
-            eventAggregates = aggregates,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -145,6 +151,7 @@ class HubViewModel(
         refresh()
         observeAutoConfirmations()
     }
+
     private fun observeAutoConfirmations() {
         viewModelScope.launch {
             _refreshTrigger.collect { runAutoConfirm() }

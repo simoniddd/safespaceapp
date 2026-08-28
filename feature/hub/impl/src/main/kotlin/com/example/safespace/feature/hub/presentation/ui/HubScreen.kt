@@ -46,7 +46,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,11 +59,8 @@ import com.example.safespace.core.domain.model.ExpenseCategory
 import com.example.safespace.core.domain.model.ExpenseConfirmation
 import com.example.safespace.core.domain.model.WeatherIcon
 import com.example.safespace.core.domain.model.health.HealthState
-import com.example.safespace.core.domain.state.IntentionState
 import com.example.safespace.core.ui.components.QuestionAction
 import com.example.safespace.core.ui.components.QuestionCard
-import com.example.safespace.core.ui.components.SourceStamp
-import com.example.safespace.core.ui.components.toSourceLabel
 import com.example.safespace.core.ui.preview.PreviewTheme
 import com.example.safespace.core.ui.theme.AppColors
 import com.example.safespace.core.ui.theme.AppColors.CoralRed
@@ -72,11 +68,12 @@ import com.example.safespace.core.ui.theme.AppColors.ElectricBlue
 import com.example.safespace.core.ui.theme.AppColors.NeonYellow
 import com.example.safespace.core.ui.theme.AppColors.PureBlack
 import com.example.safespace.core.ui.theme.AppColors.SandBackground
-import com.example.safespace.core.ui.theme.SafeSpaceType
-import com.example.safespace.feature.hub.presentation.state.HubTimelineItem
+import com.example.safespace.feature.hub.presentation.model.TimelineItem
 import com.example.safespace.feature.hub.presentation.state.PendingQuestion
+import com.example.safespace.feature.hub.presentation.ui.timeline.EventRow
+import com.example.safespace.feature.hub.presentation.ui.timeline.ExpenseRow
+import com.example.safespace.feature.hub.presentation.ui.timeline.HealthDigitRow
 import com.example.safespace.feature.hub.presentation.util.formatAmount
-import com.example.safespace.feature.hub.presentation.util.formatTime
 import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
 import org.koin.androidx.compose.koinViewModel
 import kotlin.time.ExperimentalTime
@@ -124,7 +121,7 @@ fun HubScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Transparent)
+            .background(Color.Gray)
     ) {
         // --- КОНТЕНТ (Поверх стекла) ---
         Box(modifier = Modifier.fillMaxSize()) {
@@ -136,9 +133,7 @@ fun HubScreen(
                     .padding(start = 18.dp, end = 18.dp, bottom = 48.dp)
             ) {
                 HubHeader(
-                    userName = "Alex",
                     todayIcon = state.todayIcon,
-                    onCalendarClick = { viewModel.onCalendarClicked() },
                     onWeatherPick = { viewModel.saveWeather(it) },
                 )
                 Spacer(modifier = Modifier.height(20.dp))
@@ -207,8 +202,6 @@ fun HubScreen(
                 }
                 TimelineSection(
                     items = state.timelineItems,
-                    doneCountByEventId = state.doneCountByEventId,
-                    eventAggregates = state.eventAggregates,
                     onMarkIntention = viewModel::markEventAsIntention,
                 )
             }
@@ -222,9 +215,7 @@ fun HubScreen(
 
 @Composable
 private fun HubHeader(
-    userName: String,
     todayIcon: WeatherIcon?,
-    onCalendarClick: () -> Unit,
     onWeatherPick: (WeatherIcon) -> Unit
 ) {
     var fanExpanded by remember { mutableStateOf(false) }
@@ -580,9 +571,7 @@ private fun GlassWidgetCard(
 
 @Composable
 private fun TimelineSection(
-    items: List<HubTimelineItem>,
-    doneCountByEventId: Map<String, Int>,
-    eventAggregates: Map<String, com.example.safespace.feature.hub.presentation.state.EventAggregate>,
+    items: List<TimelineItem>,
     onMarkIntention: (eventId: String, instanceStart: Long, durationMin: Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -635,347 +624,27 @@ private fun TimelineSection(
                         color = PureBlack.copy(alpha = 0.5f)
                     )
                 } else {
-                    items.forEach { timelineItem ->
-                        when (timelineItem) {
-                            is HubTimelineItem.Expense -> {
-                                val expense = timelineItem.item
-                                // 📎 = маркер связи с событием (хронология не сдвигается,
-                                // трата остаётся на своём времени). Полный коннектор — день 24.
-                                val linkedMark = if (expense.eventId != null) "📎 " else ""
-                                TimelineItem(
-                                    dotColor = CoralRed,
-                                    time = formatTime(expense.timeStamp),
-                                    title = expense.description,
-                                    subtitle = "$linkedMark${expense.category.uppercase()} · -${
-                                        formatAmount(
-                                            expense.amount,
-                                            "KZT"
-                                        )
-                                    }",
-                                    isPast = true
-                                )
-                            }
+                    items.forEach { item ->
+                        when (item) {
+                            is TimelineItem.Expense -> ExpenseRow(item)
 
-                            is HubTimelineItem.Event -> {
-                                val event = timelineItem.item
-                                val aggregate = eventAggregates[event.id]
-                                val baseSubtitle = "${event.type.name} · ${event.durationMin} мин"
-                                // «· 3 траты · $46 · 4ч» — свёрнутая сводка per body-layer.md.
-                                // Показываем только если траты привязаны, иначе шум.
-                                val extendedSubtitle =
-                                    if (aggregate != null && aggregate.expenseCount > 0) {
-                                        val sum = "%.0f".format(aggregate.totalExpense)
-                                        val hours =
-                                            "%.1f".format(aggregate.durationHours).trimEnd('0')
-                                                .trimEnd('.')
-                                        "$baseSubtitle · ${aggregate.expenseCount} тр · \$$sum · ${hours}ч"
-                                    } else baseSubtitle
-                                val recurringHint = aggregate?.recurringAverage?.let {
-                                    "обычно ~\$${"%.0f".format(it)}"
-                                }
-                                EventTimelineItem(
-                                    time = event.timeString,
-                                    title = event.title,
-                                    subtitle = extendedSubtitle,
-                                    recurringHint = recurringHint,
-                                    intentionState = event.intentionState,
-                                    doneCount = doneCountByEventId[event.id] ?: 0,
-                                    onMarkIntention = {
-                                        onMarkIntention(
-                                            event.id,
-                                            event.timeStamp,
-                                            event.durationMin
-                                        )
-                                    },
-                                )
-                            }
+                            is TimelineItem.Event -> EventRow(
+                                item = item,
+                                onMarkIntention = {
+                                    onMarkIntention(
+                                        item.eventId,
+                                        item.instanceStart,
+                                        item.durationMin
+                                    )
+                                },
+                            )
 
-                            is HubTimelineItem.HealthSleep -> {
-                                val sleep = timelineItem.item
-                                val hours = sleep.durationMinutes / 60
-                                val mins = sleep.durationMinutes % 60
-                                HealthTimelineItem(
-                                    sourceLabel = "HC",
-                                    primary = "${hours}ч ${mins.toString().padStart(2, '0')}мин",
-                                    secondary = "Сон",
-                                    time = null,
-                                )
-                            }
-
-                            is HubTimelineItem.HealthSteps -> {
-                                val steps = timelineItem.item
-                                HealthTimelineItem(
-                                    sourceLabel = "HC",
-                                    primary = formatSteps(steps.count),
-                                    secondary = "Шаги",
-                                    hint = "· ещё идёт",
-                                    time = null,
-                                )
-                            }
-
-                            is HubTimelineItem.HealthExercise -> {
-                                val exercise = timelineItem.item
-                                HealthTimelineItem(
-                                    sourceLabel = exercise.source.toSourceLabel(),
-                                    primary = exercise.title.ifEmpty { "Тренировка" },
-                                    secondary = "${exercise.durationMinutes} мин",
-                                    time = timelineItem.time,
-                                )
-                            }
+                            is TimelineItem.HealthDigit -> HealthDigitRow(item)
                         }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun TimelineItem(
-    dotColor: Color,
-    time: String,
-    title: String,
-    subtitle: String,
-    isPast: Boolean
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(
-            modifier = Modifier
-                .size(13.dp)
-                .clip(CircleShape)
-                .background(dotColor)
-                .padding(top = 3.dp)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = PureBlack.copy(alpha = if (isPast) 0.6f else 1f),
-                textDecoration = if (isPast) TextDecoration.LineThrough else null,
-                fontFamily = FontFamily.Monospace
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                fontSize = 10.sp,
-                letterSpacing = 1.sp,
-                color = PureBlack.copy(alpha = 0.42f),
-                fontFamily = FontFamily.Monospace
-            )
-        }
-        Text(
-            text = time,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = PureBlack.copy(alpha = 0.6f),
-            fontFamily = FontFamily.Monospace
-        )
-    }
-}
-
-@Composable
-private fun EventTimelineItem(
-    time: String,
-    title: String,
-    subtitle: String,
-    intentionState: IntentionState?,
-    doneCount: Int,
-    onMarkIntention: () -> Unit,
-    recurringHint: String? = null,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(13.dp)
-                .clip(CircleShape)
-                .background(ElectricBlue)
-                .padding(top = 3.dp)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = title,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = PureBlack,
-                    fontFamily = FontFamily.Monospace,
-                )
-                when (intentionState) {
-                    IntentionState.DONE -> Text(
-                        text = if (doneCount > 1) "✓ $doneCount раза" else "✓",
-                        fontSize = 10.sp,
-                        color = NeonYellow.copy(alpha = 0.85f),
-                        fontFamily = FontFamily.Monospace,
-                    )
-
-                    IntentionState.UPCOMING -> Text(
-                        text = "🎯",
-                        fontSize = 10.sp,
-                    )
-
-                    else -> Unit
-                }
-            }
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                fontSize = 10.sp,
-                letterSpacing = 1.sp,
-                color = PureBlack.copy(alpha = 0.42f),
-                fontFamily = FontFamily.Monospace,
-            )
-            // «обычно ~$80» — вывод, не оценка (body-layer.md). Один серый,
-            // тише subtitle, БЕЗ форматирования вроде bold/акцента.
-            if (recurringHint != null) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = recurringHint,
-                    fontSize = 10.sp,
-                    letterSpacing = 1.sp,
-                    color = PureBlack.copy(alpha = 0.32f),
-                    fontFamily = FontFamily.Monospace,
-                )
-            }
-        }
-        if (intentionState == null) {
-            Text(
-                text = "🎯",
-                fontSize = 16.sp,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onMarkIntention)
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-            )
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = time,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = PureBlack.copy(alpha = 0.6f),
-            fontFamily = FontFamily.Monospace,
-        )
-    }
-}
-
-@Composable
-private fun TimelineItemActive(time: String, title: String, subtitle: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(
-            modifier = Modifier
-                .size(13.dp)
-                .clip(CircleShape)
-                .background(ElectricBlue.copy(alpha = 0.25f))
-                .border(2.5.dp, ElectricBlue, CircleShape)
-                .padding(top = 3.dp)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = title,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = PureBlack,
-                    fontFamily = FontFamily.Monospace
-                )
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(ElectricBlue)
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        "СКОРО",
-                        fontSize = 9.sp,
-                        letterSpacing = 1.sp,
-                        color = Color.White,
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(3.dp))
-            Text(
-                text = subtitle,
-                fontSize = 10.sp,
-                letterSpacing = 1.sp,
-                color = PureBlack.copy(alpha = 0.7f),
-                fontFamily = FontFamily.Monospace
-            )
-        }
-        Text(
-            text = time,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = ElectricBlue,
-            fontFamily = FontFamily.Monospace
-        )
-    }
-}
-
-@Composable
-private fun TimelineItemFuture(time: String, title: String, subtitle: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(
-            modifier = Modifier
-                .size(13.dp)
-                .border(1.5.dp, PureBlack.copy(alpha = 0.5f), CircleShape)
-                .padding(top = 3.dp)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = PureBlack.copy(alpha = 0.5f),
-                fontFamily = FontFamily.Monospace
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                fontSize = 10.sp,
-                letterSpacing = 1.sp,
-                color = PureBlack.copy(alpha = 0.35f),
-                fontFamily = FontFamily.Monospace
-            )
-        }
-        Text(
-            text = time,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = PureBlack.copy(alpha = 0.3f),
-            fontFamily = FontFamily.Monospace
-        )
     }
 }
 
@@ -1020,79 +689,6 @@ fun HealthConnectGhostBlock(
     }
 }
 
-/**
- * Health-жанр в ленте: печать источника слева, tnum-цифры, стекло 4.5% (тише траты 5.5%
- * и события 7%). Без цветной точки — источник данных, а не событие пользователя.
- */
-@Composable
-private fun HealthTimelineItem(
-    sourceLabel: String,
-    primary: String,
-    secondary: String,
-    time: String?,
-    hint: String? = null,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(AppColors.GlassBody)
-            .border(1.dp, AppColors.BodyOutline, RoundedCornerShape(12.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SourceStamp(label = sourceLabel)
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = primary,
-                    style = SafeSpaceType.healthDigit
-                )
-                if (hint != null) {
-                    Text(
-                        text = hint,
-                        fontSize = 10.sp,
-                        color = AppColors.BodySubtitle,
-                        fontFamily = FontFamily.Monospace,
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = secondary,
-                fontSize = 10.sp,
-                letterSpacing = 1.sp,
-                color = AppColors.BodySubtitle,
-                fontFamily = FontFamily.Monospace,
-            )
-        }
-        if (time != null) {
-            Text(
-                text = time,
-                style = SafeSpaceType.healthDigit
-            )
-        }
-    }
-}
-
-// Форматирование шагов с неразрывным пробелом-разделителем тысяч: "8 042".
-// Не String.format(%,d) — чтобы не тащить локаль-зависимость (в ru будет ", ").
-private fun formatSteps(count: Int): String =
-    buildString {
-        val str = count.toString()
-        str.forEachIndexed { i, ch ->
-            if (i > 0 && (str.length - i) % 3 == 0) append(' ')
-            append(ch)
-        }
-        append(" шагов")
-    }
-
-// Посмотри на этот Preview. Он отрендерит ровно то, что было в HTML.
 @Preview(showBackground = true)
 @Composable
 fun HubScreenLiquidGlassPreview() {

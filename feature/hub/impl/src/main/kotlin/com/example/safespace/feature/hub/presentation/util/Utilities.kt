@@ -1,9 +1,11 @@
 package com.example.safespace.feature.hub.presentation.util
 
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 import java.text.NumberFormat
 import java.util.Locale
+import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -25,3 +27,22 @@ fun formatTime(epochMillis: Long): String {
         .toLocalDateTime(TimeZone.currentSystemDefault()).time
         .let { "%02d:%02d".format(it.hour, it.minute) }
 }
+
+// Форматирование шагов с неразрывным пробелом-разделителем тысяч: "8 042".
+// Не String.format(%,d) — чтобы не тащить локаль-зависимость (в ru будет ", ").
+fun formatSteps(count: Int): String =
+    buildString {
+        val str = count.toString()
+        str.forEachIndexed { i, ch ->
+            if (i > 0 && (str.length - i) % 3 == 0) append(' ')
+            append(ch)
+        }
+        append(" шагов")
+    }
+
+@OptIn(ExperimentalTime::class)
+fun startOfTodayMillis(): Long =
+    Clock.System.now()
+        .toLocalDateTime(TimeZone.currentSystemDefault()).date
+        .atStartOfDayIn(TimeZone.currentSystemDefault())
+        .toEpochMilliseconds()

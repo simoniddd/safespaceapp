@@ -12,13 +12,13 @@ import com.example.safespace.feature.expenses.navigation.ExpensesEntryPoint
 import com.example.safespace.feature.hub.fake.FakeCalendarSource
 import com.example.safespace.feature.hub.fake.FakeEventsSource
 import com.example.safespace.feature.hub.fake.FakeExpensesRepository
-import com.example.safespace.feature.hub.fake.FakeIntentionRepository
 import com.example.safespace.feature.hub.fake.FakeHealthRepository
+import com.example.safespace.feature.hub.fake.FakeIntentionRepository
 import com.example.safespace.feature.hub.fake.FakeIntentionScheduler
 import com.example.safespace.feature.hub.fake.FakeNavigator
 import com.example.safespace.feature.hub.fake.FakePendingExpenseDraftRepository
 import com.example.safespace.feature.hub.fake.FakeWeatherRepository
-import com.example.safespace.feature.hub.presentation.state.HubTimelineItem
+import com.example.safespace.feature.hub.presentation.model.TimelineItem
 import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.Dispatchers
@@ -80,7 +80,7 @@ class HubViewModelTest {
 
             assertEquals(false, state.isLoading)
             assertEquals(0.0, state.dailyExpenses)
-            assertEquals(emptyList<HubTimelineItem>(), state.timelineItems)
+            assertEquals(emptyList<TimelineItem>(), state.timelineItems)
         }
     }
 
