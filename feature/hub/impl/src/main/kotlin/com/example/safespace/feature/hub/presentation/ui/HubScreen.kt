@@ -70,10 +70,14 @@ import com.example.safespace.core.ui.theme.AppColors.PureBlack
 import com.example.safespace.core.ui.theme.AppColors.SandBackground
 import com.example.safespace.feature.hub.presentation.model.TimelineItem
 import com.example.safespace.feature.hub.presentation.state.PendingQuestion
+import com.example.safespace.feature.hub.presentation.ui.component.DayHeaderWeatherIcon
+import com.example.safespace.feature.hub.presentation.ui.component.LiveGlassOverlay
+import com.example.safespace.feature.hub.presentation.ui.component.WeatherFan
 import com.example.safespace.feature.hub.presentation.ui.timeline.EventRow
 import com.example.safespace.feature.hub.presentation.ui.timeline.ExpenseRow
 import com.example.safespace.feature.hub.presentation.ui.timeline.HealthDigitRow
 import com.example.safespace.feature.hub.presentation.util.formatAmount
+import com.example.safespace.feature.hub.presentation.util.formatDateHeader
 import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
 import org.koin.androidx.compose.koinViewModel
 import kotlin.time.ExperimentalTime
@@ -227,7 +231,7 @@ private fun HubHeader(
     ) {
         Column {
             Text(
-                text = "ПОНЕДЕЛЬНИК · MONDAY",
+                text = formatDateHeader(),
                 fontSize = 10.sp,
                 letterSpacing = 2.5.sp,
                 color = PureBlack.copy(alpha = 0.5f),
@@ -235,7 +239,7 @@ private fun HubHeader(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Сегодня, 24 Июня",
+                text = "Сегодня",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = PureBlack,

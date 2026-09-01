@@ -1,4 +1,4 @@
-package com.example.safespace.feature.hub.presentation.ui
+package com.example.safespace.feature.hub.presentation.ui.component
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
@@ -41,6 +41,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -104,9 +106,9 @@ private fun GhostCloud(onClick: () -> Unit, modifier: Modifier = Modifier) {
             drawCircle(
                 color = AppColors.GhostStroke,
                 radius = size.minDimension / 2f - 1.dp.toPx(),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                style = Stroke(
                     width = 1.dp.toPx(),
-                    pathEffect = androidx.compose.ui.graphics.PathEffect
+                    pathEffect = PathEffect
                         .dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx())),
                 ),
             )

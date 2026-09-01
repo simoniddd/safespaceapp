@@ -2,8 +2,11 @@ package com.example.safespace.feature.hub.presentation.util
 
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.todayIn
 import java.text.NumberFormat
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -46,3 +49,12 @@ fun startOfTodayMillis(): Long =
         .toLocalDateTime(TimeZone.currentSystemDefault()).date
         .atStartOfDayIn(TimeZone.currentSystemDefault())
         .toEpochMilliseconds()
+@OptIn(ExperimentalTime::class)
+fun formatDateHeader(): String {
+    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+    val javaDate = today.toJavaLocalDate()
+// Форматирует дату в "ПЯТНИЦА · 4 ИЮЛЯ"
+    val datePattern = DateTimeFormatter.ofPattern("EEEE · d MMMM", Locale("ru"))
+    val formattedHeaderDate = javaDate.format(datePattern).uppercase()
+    return formattedHeaderDate
+}

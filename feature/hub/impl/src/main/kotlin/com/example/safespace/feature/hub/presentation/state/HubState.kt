@@ -39,7 +39,6 @@ data class HubState(
     val isLoading: Boolean = true,
     val dailyExpenses: Double = 0.0,
     val upcomingEventsCount: Int = 0,
-    val userName: String = "User",
     val todayIcon: WeatherIcon? = null,
     val timelineItems: List<TimelineItem> = emptyList(),
     val pendingQuestion: PendingQuestion? = null,
