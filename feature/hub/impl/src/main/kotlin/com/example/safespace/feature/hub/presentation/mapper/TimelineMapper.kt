@@ -97,6 +97,7 @@ class TimelineMapper {
             icon = "💪",
             title = e.title.ifEmpty { "Тренировка" },
             digit = "${e.durationMinutes} мин",
+            source = e.source,
         )
 }
 

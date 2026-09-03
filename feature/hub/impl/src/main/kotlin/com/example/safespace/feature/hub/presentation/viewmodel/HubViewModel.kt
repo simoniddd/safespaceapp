@@ -127,7 +127,6 @@ class HubViewModel(
 
         HubState(
             isLoading = false,
-            dailyExpenses = expenses.sumOf { it.amount },
             timelineItems = timelineMapper(
                 expenses = expenses,
                 events = eventsWithState,

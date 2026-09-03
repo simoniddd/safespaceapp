@@ -17,6 +17,7 @@ sealed interface TimelineItem {
         val icon: String, // "😴" / "👟" / "💪"
         val title: String, // "Сон" / "Шаги" / название тренировки
         val digit: String, // "7ч 24м" / "8 042" / "45 мин"
+        val source: String? = null, // packageName источника тренировки; null для sleep/steps (агрегаты HC)
     ) : TimelineItem
 
     data class Expense(

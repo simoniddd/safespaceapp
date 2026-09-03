@@ -79,7 +79,6 @@ class HubViewModelTest {
             val state = awaitItem()
 
             assertEquals(false, state.isLoading)
-            assertEquals(0.0, state.dailyExpenses)
             assertEquals(emptyList<TimelineItem>(), state.timelineItems)
         }
     }
@@ -102,7 +101,6 @@ class HubViewModelTest {
             fakeExpenseRepo.emit(listOf(someExpense))
             val updatedState = awaitItem()
 
-            assertEquals(150.0, updatedState.dailyExpenses)
             assertEquals(1, updatedState.timelineItems.size)
             cancelAndIgnoreRemainingEvents()
         }
@@ -157,7 +155,6 @@ class HubViewModelTest {
             fakeExpenseRepo.emit(listOf(someExpense1, someExpense2))
             val updatedState = awaitItem()
 
-            assertEquals(320.0, updatedState.dailyExpenses)
             assertEquals(4, updatedState.timelineItems.size)
             cancelAndIgnoreRemainingEvents()
         }
