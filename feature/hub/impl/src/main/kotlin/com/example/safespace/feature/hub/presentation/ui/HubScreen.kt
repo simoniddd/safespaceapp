@@ -193,12 +193,12 @@ fun HubScreen(
                     null -> Unit
                 }
                 TimelineSection(
-                    items = state.timelineItems,
+                    items = state.days.flatMap { it.items },
                     onMarkIntention = viewModel::markEventAsIntention,
                 )
             }
             LiveGlassOverlay(
-                weather = state.todayIcon,
+                weather = state.days.firstOrNull()?.weatherIcon,
                 modifier = Modifier.matchParentSize()
             )
         }

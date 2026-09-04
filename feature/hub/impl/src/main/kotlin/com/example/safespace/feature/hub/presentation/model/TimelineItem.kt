@@ -11,9 +11,11 @@ sealed interface TimelineItem {
      * В UI НЕ рендерится для Health.
      */
     val sortKey: Long
+    val stableId: String
 
     data class HealthDigit(
         override val sortKey: Long,
+        override val stableId: String,
         val icon: String, // "😴" / "👟" / "💪"
         val title: String, // "Сон" / "Шаги" / название тренировки
         val digit: String, // "7ч 24м" / "8 042" / "45 мин"
@@ -22,6 +24,7 @@ sealed interface TimelineItem {
 
     data class Expense(
         override val sortKey: Long,
+        override val stableId: String,
         val time: String,
         val title: String,
         val amount: Long,
@@ -29,6 +32,7 @@ sealed interface TimelineItem {
 
     data class Event(
         override val sortKey: Long,
+        override val stableId: String,
         val time: String,
         val eventId: String,
         val instanceStart: Long,

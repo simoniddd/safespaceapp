@@ -1,6 +1,7 @@
 package com.example.safespace.feature.hub.presentation.state
 
 import com.example.safespace.core.domain.model.WeatherIcon
+import kotlinx.datetime.LocalDate
 import com.example.safespace.core.domain.model.health.HealthState
 import com.example.safespace.feature.hub.presentation.model.TimelineItem
 
@@ -35,10 +36,16 @@ data class EventAggregate(
     val recurringAverage: Double? = null,
 )
 
+data class DaySection(
+    val date: LocalDate,
+    val label: String,
+    val weatherIcon: WeatherIcon?,
+    val items: List<TimelineItem>,
+)
+
 data class HubState(
-    val isLoading: Boolean = true,
-    val todayIcon: WeatherIcon? = null,
-    val timelineItems: List<TimelineItem> = emptyList(),
+    val days: List<DaySection> = emptyList(),
     val pendingQuestion: PendingQuestion? = null,
     val healthState: HealthState = HealthState.NotInstalled,
+    val isLoading: Boolean = true,
 )

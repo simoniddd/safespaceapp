@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalCoroutinesApi::class)
+@file:OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
 
 package com.example.safespace.feature.hub.viewmodel
 
@@ -27,9 +27,14 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.todayIn
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 class HubViewModelTest {
 
@@ -37,6 +42,10 @@ class HubViewModelTest {
     private val fakeEventsSource = FakeEventsSource()
     private val fakeCalendarSource = FakeCalendarSource()
     private val testDispatcher = UnconfinedTestDispatcher()
+
+    private val tz = TimeZone.currentSystemDefault()
+    private val today = Clock.System.todayIn(tz)
+    private val todayStartMillis = today.atStartOfDayIn(tz).toEpochMilliseconds()
 
     private val fakeExpensesEntryPoint = object : ExpensesEntryPoint {
         override fun expensesRoute(): Any = "expenses"
@@ -72,90 +81,96 @@ class HubViewModelTest {
     )
 
     @Test
-    fun `начальный стейт — пустые репозитории → пустой таймлайн`() = runTest {
+    fun `начальный стейт — пустые репозитории → две секции без элементов`() = runTest {
         val vm = createViewModel()
 
         vm.uiState.test {
             val state = awaitItem()
 
             assertEquals(false, state.isLoading)
-            assertEquals(emptyList<TimelineItem>(), state.timelineItems)
+            // multi-day: today + tomorrow всегда две секции, независимо от наличия данных
+            assertEquals(2, state.days.size)
+            assertEquals(emptyList<TimelineItem>(), state.days.flatMap { it.items })
         }
     }
 
     @Test
-    fun `репозиторий выдает расходы и стейт обновляется`() = runTest {
+    fun `трата попадает только в секцию своего дня`() = runTest {
         val vm = createViewModel()
-        val someExpense = ExpensesItem(
-            "",
+        val todayExpense = ExpensesItem(
+            id = "1",
             amount = 150.0,
-            description = "TODO()",
-            category = "TODO()",
-            dateString = "TODO()",
-            eventId = "TODO()",
-            timeStamp = 0L
+            description = "кофе",
+            category = "food",
+            dateString = "",
+            timeStamp = todayStartMillis + 12 * 3600 * 1000, // сегодня в полдень
         )
 
         vm.uiState.test {
-            awaitItem()
-            fakeExpenseRepo.emit(listOf(someExpense))
-            val updatedState = awaitItem()
+            awaitItem() // начальное после combine
+            fakeExpenseRepo.emit(listOf(todayExpense))
+            val updated = awaitItem()
 
-            assertEquals(1, updatedState.timelineItems.size)
+            val todaySection = updated.days.first { it.date == today }
+            val tomorrowSection = updated.days.first { it.date != today }
+
+            assertEquals(1, todaySection.items.size)
+            assertEquals(0, tomorrowSection.items.filterIsInstance<TimelineItem.Expense>().size)
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun `оба источника выдают данные — расходы и события смешаны и отсортированы`() = runTest {
+    fun `траты и события в today отсортированы по времени`() = runTest {
         val vm = createViewModel()
-        val someExpense1 = ExpensesItem(
-            "1",
-            amount = 150.0,
-            description = "TODO()",
-            category = "TODO()",
-            dateString = "TODO()",
-            eventId = "TODO()",
-            timeStamp = 0L
+        val expenseMorning = ExpensesItem(
+            id = "e1",
+            amount = 100.0,
+            description = "завтрак",
+            category = "food",
+            dateString = "",
+            timeStamp = todayStartMillis + 8 * 3600 * 1000, // 08:00
         )
-        val someExpense2 = ExpensesItem(
-            "3",
-            amount = 170.0,
-            description = "TODO()",
-            category = "TODO()",
-            dateString = "TODO()",
-            eventId = "TODO()",
-            timeStamp = 0L
+        val expenseEvening = ExpensesItem(
+            id = "e2",
+            amount = 200.0,
+            description = "ужин",
+            category = "food",
+            dateString = "",
+            timeStamp = todayStartMillis + 20 * 3600 * 1000, // 20:00
         )
-        val someEventA = CalendarEventItem(
-            id = "2",
-            title = "",
-            timeStamp = 124125125,
-            dateString = "TODO()",
-            timeString = "TODO()",
+        val eventNoon = CalendarEventItem(
+            id = "ev1",
+            title = "созвон",
+            timeStamp = todayStartMillis + 12 * 3600 * 1000, // 12:00
+            dateString = "",
+            timeString = "12:00",
+            calendarId = 0L,
+            durationMin = 60,
+            type = EventType.WORK,
+        )
+        val eventAfternoon = CalendarEventItem(
+            id = "ev2",
+            title = "спорт",
+            timeStamp = todayStartMillis + 18 * 3600 * 1000, // 18:00
+            dateString = "",
+            timeString = "18:00",
             calendarId = 0L,
             durationMin = 90,
             type = EventType.ENTERTAINMENT,
         )
-        val someEventB = CalendarEventItem(
-            id = "4",
-            title = "",
-            timeStamp = 124125125,
-            dateString = "TODO()",
-            timeString = "TODO()",
-            calendarId = 0L,
-            durationMin = 100,
-            type = EventType.ENTERTAINMENT,
-        )
 
-        fakeEventsSource.setEvents(listOf(someEventA, someEventB))
+        fakeEventsSource.setEvents(listOf(eventNoon, eventAfternoon))
 
         vm.uiState.test {
-            awaitItem() // пустое начальное состояние после refresh()
-            fakeExpenseRepo.emit(listOf(someExpense1, someExpense2))
-            val updatedState = awaitItem()
+            awaitItem()
+            fakeExpenseRepo.emit(listOf(expenseMorning, expenseEvening))
+            val updated = awaitItem()
 
-            assertEquals(4, updatedState.timelineItems.size)
+            val todaySection = updated.days.first { it.date == today }
+            val sortKeys = todaySection.items.map { it.sortKey }
+            assertEquals(sortKeys.sorted(), sortKeys)
+            assertEquals(4, todaySection.items.size)
             cancelAndIgnoreRemainingEvents()
         }
     }

@@ -80,6 +80,7 @@ private fun HealthDigitRowPreview() {
                 icon = "😴",
                 title = "Сон",
                 digit = "7ч 24м",
+                stableId = ""
             )
         )
     }

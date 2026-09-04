@@ -9,14 +9,17 @@ import com.example.safespace.feature.hub.presentation.model.TimelineItem
 import com.example.safespace.feature.hub.presentation.state.EventAggregate
 import com.example.safespace.feature.hub.presentation.util.formatSteps
 import com.example.safespace.feature.hub.presentation.util.formatTime
-import com.example.safespace.feature.hub.presentation.util.startOfTodayMillis
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toInstant
 import kotlin.math.roundToLong
 import kotlin.time.ExperimentalTime
 
+@OptIn(ExperimentalTime::class)
 class TimelineMapper {
     operator fun invoke(
+        date: LocalDate,
         expenses: List<ExpensesItem>,
         events: List<CalendarEventItem>,
         eventAggregates: Map<String, EventAggregate> = emptyMap(),
@@ -30,8 +33,8 @@ class TimelineMapper {
             mapEvent(it, eventAggregates[it.id], doneCountByEventId[it.id] ?: 0)
         }
         val healthItems = buildList {
-            sleep?.let { add(mapSleep(it)) }
-            steps?.let { add(mapSteps(it)) }
+            sleep?.let { add(mapSleep(it, date)) }
+            steps?.let { add(mapSteps(it, date)) }
             addAll(exercises.map(::mapExercise))
         }
 
@@ -41,6 +44,7 @@ class TimelineMapper {
     private fun mapExpense(e: ExpensesItem): TimelineItem.Expense =
         TimelineItem.Expense(
             sortKey = e.timeStamp,
+            stableId = "expense-${e.id}",
             time = formatTime(e.timeStamp),
             title = e.description,
             amount = e.amount.roundToLong()
@@ -53,6 +57,7 @@ class TimelineMapper {
     ): TimelineItem.Event =
         TimelineItem.Event(
             sortKey = e.timeStamp,
+            stableId = "event-${e.id}-${e.timeStamp}",
             eventId = e.id,
             time = e.timeString,
             instanceStart = e.timeStamp,
@@ -73,32 +78,38 @@ class TimelineMapper {
         } else base
     }
 
-    @OptIn(ExperimentalTime::class)
-    private fun mapSleep(s: SleepSummary): TimelineItem.HealthDigit =
+    private fun mapSleep(s: SleepSummary, date: LocalDate): TimelineItem.HealthDigit =
         TimelineItem.HealthDigit(
-            sortKey = startOfTodayMillis(),
+            sortKey = startOfDayMillis(date),
+            stableId = "health-sleep-$date",
             icon = "😴",
             title = "Сон",
             digit = "${s.durationMinutes / 60}ч ${s.durationMinutes % 60}м",
         )
 
-    private fun mapSteps(s: DailySteps): TimelineItem.HealthDigit =
+    private fun mapSteps(s: DailySteps, date: LocalDate): TimelineItem.HealthDigit =
         TimelineItem.HealthDigit(
-            sortKey = startOfTodayMillis() + 20L * 3600 * 1000,
+            sortKey = startOfDayMillis(date) + 20L * 3600 * 1000,
+            stableId = "health-steps-$date",
             icon = "👟",
             title = "Шаги",
             digit = formatSteps(s.count),
         )
 
-    @OptIn(ExperimentalTime::class)
-    private fun mapExercise(e: ExerciseSession): TimelineItem.HealthDigit =
-        TimelineItem.HealthDigit(
-            sortKey = e.startTime.toInstant(TimeZone.currentSystemDefault()).toEpochMilliseconds(),
+    private fun mapExercise(e: ExerciseSession): TimelineItem.HealthDigit {
+        val sortKey = e.startTime.toInstant(TimeZone.currentSystemDefault()).toEpochMilliseconds()
+        return TimelineItem.HealthDigit(
+            sortKey = sortKey,
+            stableId = "health-exercise-$sortKey",
             icon = "💪",
             title = e.title.ifEmpty { "Тренировка" },
             digit = "${e.durationMinutes} мин",
             source = e.source,
         )
+    }
+
+    private fun startOfDayMillis(date: LocalDate): Long =
+        date.atStartOfDayIn(TimeZone.currentSystemDefault()).toEpochMilliseconds()
 }
 
 /**

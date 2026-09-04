@@ -25,6 +25,7 @@ import com.example.safespace.feature.expenses.domain.repository.ExpensesReposito
 import com.example.safespace.feature.expenses.navigation.ExpensesEntryPoint
 import com.example.safespace.feature.hub.presentation.mapper.TimelineMapper
 import com.example.safespace.feature.hub.presentation.mapper.buildEventAggregates
+import com.example.safespace.feature.hub.presentation.state.DaySection
 import com.example.safespace.feature.hub.presentation.state.HubState
 import com.example.safespace.feature.hub.presentation.state.PendingQuestion
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,7 +39,11 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -64,16 +69,28 @@ class HubViewModel(
     val healthPermissions: Set<String> =
         healthRepository.permissionsFor(HealthDataType.entries.toSet())
 
-    @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
-    private val systemEventsFlow: Flow<List<CalendarEventItem>> = _refreshTrigger.flatMapLatest {
-        flow { emit(eventsSource.getEventsForDate(Clock.System.todayIn(TimeZone.currentSystemDefault()))) }
-    }
+    // Данные конкретного дня: события календаря + состояние Health.
+    // Держим вместе, потому что оба фетчатся по date и обновляются одним refresh-триггером.
+    private data class DayData(
+        val date: LocalDate,
+        val events: List<CalendarEventItem>,
+        val healthState: HealthState,
+    )
 
+    // Multi-day: [today, tomorrow]. Один suspend-фетч на оба дня, чтобы combine ниже не разросся.
     @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
-    private val healthFlow: Flow<HealthState> = _refreshTrigger.flatMapLatest {
+    private val daysDataFlow: Flow<List<DayData>> = _refreshTrigger.flatMapLatest {
         flow {
-            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-            emit(healthRepository.getState(today))
+            val tz = TimeZone.currentSystemDefault()
+            val today = Clock.System.todayIn(tz)
+            val tomorrow = today.plus(1, DateTimeUnit.DAY)
+            emit(listOf(today, tomorrow).map { date ->
+                DayData(
+                    date = date,
+                    events = eventsSource.getEventsForDate(date),
+                    healthState = healthRepository.getState(date),
+                )
+            })
         }
     }
 
@@ -101,44 +118,62 @@ class HubViewModel(
     @OptIn(ExperimentalTime::class)
     val uiState: StateFlow<HubState> = combine(
         expensesBundle,
-        systemEventsFlow,
+        daysDataFlow,
         calendarSource.hiddenCalendarIds,
         intentionsFlow,
-        healthFlow,
-    ) { bundle, events, hiddenIds, intentionsPair, healthState ->
-        val (expenses, weatherIcon, recurringAverages, pendingDrafts) = bundle
+    ) { bundle, daysData, hiddenIds, intentionsPair ->
+        val (allExpenses, weatherIcon, recurringAverages, pendingDrafts) = bundle
         val (intentions, doneCounts) = intentionsPair
+        val tz = TimeZone.currentSystemDefault()
+        val today = Clock.System.todayIn(tz)
 
-        val filteredEvents = if (hiddenIds.isEmpty()) events
-        else events.filter { it.calendarId !in hiddenIds }
+        val sections = daysData.map { dayData ->
+            val filteredEvents = if (hiddenIds.isEmpty()) dayData.events
+            else dayData.events.filter { it.calendarId !in hiddenIds }
+            val eventsWithState = filteredEvents.map { it.copy(intentionState = intentions[it.id]) }
 
-        val eventsWithState = filteredEvents.map { event ->
-            event.copy(intentionState = intentions[event.id])
+            val dayStart = dayData.date.atStartOfDayIn(tz).toEpochMilliseconds()
+            val dayEnd = dayData.date.plus(1, DateTimeUnit.DAY).atStartOfDayIn(tz).toEpochMilliseconds()
+            val expensesForDay = allExpenses.filter { it.timeStamp in dayStart until dayEnd }
+
+            val aggregates = buildEventAggregates(expensesForDay, eventsWithState, recurringAverages)
+            val available = (dayData.healthState as? HealthState.Available)?.data
+            val sleep = available?.sleep
+            val steps = available?.steps?.let { DailySteps(count = it, date = dayData.date) }
+            val exercises = available?.exercises.orEmpty()
+
+            DaySection(
+                date = dayData.date,
+                label = if (dayData.date == today) "Сегодня" else "Завтра",
+                // Погода только для today — «нельзя выбрать заранее» (STATUS 24.08)
+                weatherIcon = if (dayData.date == today) weatherIcon else null,
+                items = timelineMapper(
+                    date = dayData.date,
+                    expenses = expensesForDay,
+                    events = eventsWithState,
+                    eventAggregates = aggregates,
+                    doneCountByEventId = doneCounts,
+                    sleep = sleep,
+                    steps = steps,
+                    exercises = exercises,
+                ),
+            )
         }
 
-        val available = (healthState as? HealthState.Available)?.data
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val sleep = available?.sleep
-        val steps = available?.steps?.let { DailySteps(count = it, date = today) }
-        val exercises = available?.exercises.orEmpty()
-
-        // In-memory: сумма трат + длительность + подмешанное recurring-avg per event.
-        val aggregates = buildEventAggregates(expenses, eventsWithState, recurringAverages)
+        // Для pendingQuestion нужен CalendarEventItem с intentionState — пересчитываем только для today.
+        // HubState.healthState — только today: permission живёт на уровне приложения, не дня.
+        val todayDayData = daysData.firstOrNull { it.date == today }
+        val todayEvents = todayDayData?.events?.let { evs ->
+            val filtered = if (hiddenIds.isEmpty()) evs else evs.filter { it.calendarId !in hiddenIds }
+            filtered.map { it.copy(intentionState = intentions[it.id]) }
+        }.orEmpty()
+        val todayHealthState = todayDayData?.healthState ?: HealthState.NotInstalled
 
         HubState(
+            days = sections,
+            pendingQuestion = resolvePendingQuestion(pendingDrafts, todayEvents),
+            healthState = todayHealthState,
             isLoading = false,
-            timelineItems = timelineMapper(
-                expenses = expenses,
-                events = eventsWithState,
-                eventAggregates = aggregates,
-                doneCountByEventId = doneCounts,
-                sleep = sleep,
-                steps = steps,
-                exercises = exercises
-            ),
-            pendingQuestion = resolvePendingQuestion(pendingDrafts, eventsWithState),
-            todayIcon = weatherIcon,
-            healthState = healthState,
         )
     }.stateIn(
         scope = viewModelScope,

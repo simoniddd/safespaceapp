@@ -76,10 +76,6 @@ fun EventRow(
                             text = item.title,
                             style = SafeSpaceType.expenseTitle,   // тот же title-стиль что у Expense
                         )
-                        IntentionBadge(
-                            state = item.intentionState,
-                            doneCount = item.doneCount,
-                        )
                     }
                     Spacer(modifier = Modifier.height(2.dp))
                     // Subtitle: "TYPE · N мин · N тр · $X · Yч"
@@ -110,19 +106,6 @@ fun EventRow(
     )
 }
 
-@Composable
-private fun IntentionBadge(state: IntentionState?, doneCount: Int) {
-    when (state) {
-        IntentionState.DONE -> Text(
-            text = if (doneCount > 1) "✓ $doneCount раза" else "✓",
-            style = TODO("SafeSpaceType.badge или что-нибудь мелкое monospace"),
-        )
-
-        IntentionState.UPCOMING -> Text(text = "🎯")
-        else -> Unit
-    }
-}
-
 @Preview(showBackground = true, backgroundColor = 0xFF141414)
 @Composable
 private fun EventRowPreview() {
@@ -137,8 +120,9 @@ private fun EventRowPreview() {
                 title = "Встреча с командой",
                 subtitle = "WORK · 60 мин · 2 тр · \$45 · 1ч",
                 recurringHint = "обычно ~\$80",
-                intentionState = null,
+                intentionState = IntentionState.DONE,
                 doneCount = 0,
+                stableId = ""
             ),
             onMarkIntention = {},
         )

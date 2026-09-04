@@ -93,6 +93,7 @@ private fun ExpenseRowPreview() {
                 time = "20:30",
                 title = "Кофе",
                 amount = 1250,
+                stableId = ""
             )
         )
     }
