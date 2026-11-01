@@ -63,6 +63,7 @@ import com.example.safespace.core.ui.theme.AppColors
 import com.example.safespace.core.ui.theme.SafeSpaceTokens
 import com.example.safespace.core.ui.theme.SafeSpaceType
 import com.example.safespace.feature.hub.presentation.model.TimelineItem
+import com.example.safespace.feature.hub.presentation.model.TimelineNode
 import com.example.safespace.feature.hub.presentation.state.DayKind
 import com.example.safespace.feature.hub.presentation.state.DaySection
 import com.example.safespace.feature.hub.presentation.state.PendingQuestion
@@ -77,6 +78,7 @@ import com.example.safespace.feature.hub.presentation.ui.component.formatCapline
 import com.example.safespace.feature.hub.presentation.ui.timeline.EventRow
 import com.example.safespace.feature.hub.presentation.ui.timeline.ExpenseRow
 import com.example.safespace.feature.hub.presentation.ui.timeline.HealthDigitRow
+import com.example.safespace.feature.hub.presentation.ui.timeline.NestedExpenseRow
 import com.example.safespace.feature.hub.presentation.util.formatAmount
 import com.example.safespace.feature.hub.presentation.util.rememberNow
 import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
@@ -234,14 +236,14 @@ internal fun LazyListScope.renderFeed(
         } else -1
 
         var prevKind: RowKind? = RowKind.HEADER
-        section.items.forEachIndexed { idx, item ->
-            val curKind = item.toRowKind()
+        section.items.forEachIndexed { idx, node ->
+            val curKind = node.toRowKind()
             val gap = gapBefore(prevKind, curKind)
 
-            item(key = item.stableId, contentType = curKind) {
+            item(key = node.stableId, contentType = curKind) {
                 Column(modifier = Modifier.alpha(sectionAlpha)) {
                     if (gap > 0.dp) Spacer(Modifier.height(gap))
-                    RenderItem(item = item, now = now, onMarkIntention = onMarkIntention)
+                    RenderNode(node = node, now = now, onMarkIntention = onMarkIntention)
                 }
             }
             prevKind = curKind
@@ -293,7 +295,24 @@ internal fun LazyListScope.renderFeed(
     }
 }
 
-@OptIn(ExperimentalTime::class)
+@Composable
+private fun RenderNode(
+    node: TimelineNode,
+    now: Instant,
+    onMarkIntention: (String, Long, Int) -> Unit,
+) {
+    when (node) {
+        is TimelineNode.Leaf -> RenderItem(node.item, now, onMarkIntention)
+        is TimelineNode.EventWithExpenses -> Column {
+            RenderItem(node.event, now, onMarkIntention)
+            node.nested.forEach { expense ->
+                Spacer(Modifier.height(5.dp))
+                NestedExpenseRow(item = expense)
+            }
+        }
+    }
+}
+
 @Composable
 private fun RenderItem(
     item: TimelineItem,
@@ -394,6 +413,11 @@ private fun visibleCaplineFor(days: List<DaySection>, listState: LazyListState):
 }
 
 private enum class RowKind { EXPENSE, EVENT, HEALTH, NOW, QUESTION, HEADER }
+
+private fun TimelineNode.toRowKind(): RowKind = when (this) {
+    is TimelineNode.Leaf -> item.toRowKind()
+    is TimelineNode.EventWithExpenses -> RowKind.EVENT
+}
 
 private fun TimelineItem.toRowKind(): RowKind = when (this) {
     is TimelineItem.Expense -> RowKind.EXPENSE

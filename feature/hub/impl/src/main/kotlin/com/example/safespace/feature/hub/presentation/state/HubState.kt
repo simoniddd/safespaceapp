@@ -3,7 +3,7 @@ package com.example.safespace.feature.hub.presentation.state
 import com.example.safespace.core.domain.model.WeatherIcon
 import kotlinx.datetime.LocalDate
 import com.example.safespace.core.domain.model.health.HealthState
-import com.example.safespace.feature.hub.presentation.model.TimelineItem
+import com.example.safespace.feature.hub.presentation.model.TimelineNode
 
 sealed interface PendingQuestion {
     data class IntentionCheck(
@@ -43,7 +43,7 @@ data class DaySection(
     val kind: DayKind,
     val label: String,
     val weatherIcon: WeatherIcon?,
-    val items: List<TimelineItem>,
+    val items: List<TimelineNode>,
 )
 
 data class HubState(
