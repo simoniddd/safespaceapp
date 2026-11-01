@@ -1,52 +1,50 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package com.example.safespace.feature.hub.presentation.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -57,46 +55,49 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.safespace.core.domain.model.ExpenseCategory
 import com.example.safespace.core.domain.model.ExpenseConfirmation
-import com.example.safespace.core.domain.model.WeatherIcon
 import com.example.safespace.core.domain.model.health.HealthState
 import com.example.safespace.core.ui.components.QuestionAction
 import com.example.safespace.core.ui.components.QuestionCard
 import com.example.safespace.core.ui.preview.PreviewTheme
 import com.example.safespace.core.ui.theme.AppColors
-import com.example.safespace.core.ui.theme.AppColors.CoralRed
-import com.example.safespace.core.ui.theme.AppColors.ElectricBlue
-import com.example.safespace.core.ui.theme.AppColors.NeonYellow
-import com.example.safespace.core.ui.theme.AppColors.PureBlack
-import com.example.safespace.core.ui.theme.AppColors.SandBackground
+import com.example.safespace.core.ui.theme.SafeSpaceTokens
+import com.example.safespace.core.ui.theme.SafeSpaceType
 import com.example.safespace.feature.hub.presentation.model.TimelineItem
+import com.example.safespace.feature.hub.presentation.state.DayKind
+import com.example.safespace.feature.hub.presentation.state.DaySection
 import com.example.safespace.feature.hub.presentation.state.PendingQuestion
-import com.example.safespace.feature.hub.presentation.ui.component.DayHeaderWeatherIcon
+import com.example.safespace.feature.hub.presentation.ui.component.DayHeader
+import com.example.safespace.feature.hub.presentation.ui.component.EdgeScrimBottom
+import com.example.safespace.feature.hub.presentation.ui.component.EdgeScrimTop
+import com.example.safespace.feature.hub.presentation.ui.component.GlassFab
 import com.example.safespace.feature.hub.presentation.ui.component.LiveGlassOverlay
-import com.example.safespace.feature.hub.presentation.ui.component.WeatherFan
+import com.example.safespace.feature.hub.presentation.ui.component.NowLine
+import com.example.safespace.feature.hub.presentation.ui.component.StickyCapline
+import com.example.safespace.feature.hub.presentation.ui.component.formatCapline
 import com.example.safespace.feature.hub.presentation.ui.timeline.EventRow
 import com.example.safespace.feature.hub.presentation.ui.timeline.ExpenseRow
 import com.example.safespace.feature.hub.presentation.ui.timeline.HealthDigitRow
 import com.example.safespace.feature.hub.presentation.util.formatAmount
-import com.example.safespace.feature.hub.presentation.util.formatDateHeader
+import com.example.safespace.feature.hub.presentation.util.rememberNow
 import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
+import kotlinx.datetime.LocalDate
 import org.koin.androidx.compose.koinViewModel
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
+private val HubBackground = Color(0xFF141414)
+
 @OptIn(ExperimentalTime::class)
 @Composable
 fun HubScreen(
-    viewModel: HubViewModel = koinViewModel()
+    viewModel: HubViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-
     val context = LocalContext.current
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) viewModel.refresh()
-    }
+    ) { isGranted -> if (isGranted) viewModel.refresh() }
 
     val healthLauncher = rememberLauncherForActivityResult(
         PermissionController.createRequestPermissionResultContract()
@@ -108,11 +109,8 @@ fun HubScreen(
         val hasPermission = ContextCompat.checkSelfPermission(
             context, Manifest.permission.READ_CALENDAR
         ) == PackageManager.PERMISSION_GRANTED
-        if (hasPermission) {
-            viewModel.refresh()
-        } else {
-            launcher.launch(Manifest.permission.READ_CALENDAR)
-        }
+        if (hasPermission) viewModel.refresh()
+        else launcher.launch(Manifest.permission.READ_CALENDAR)
     }
 
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -122,223 +120,313 @@ fun HubScreen(
         }
     }
 
+    val now by rememberNow()
+    val listState = rememberLazyListState()
+    val todayWeather = state.days.firstOrNull { it.kind == DayKind.TODAY }?.weatherIcon
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Gray)
+            .background(HubBackground),
     ) {
-        // --- КОНТЕНТ (Поверх стекла) ---
-        Box(modifier = Modifier.fillMaxSize()) {
+        val statusInsets = WindowInsets.statusBars.asPaddingValues()
+        val navInsets = WindowInsets.navigationBars.asPaddingValues()
+        val contentPadding = PaddingValues(
+            start = 18.dp,
+            end = 18.dp,
+            top = statusInsets.calculateTopPadding() + 36.dp,     // sticky capline
+            bottom = navInsets.calculateBottomPadding() + 112.dp, // FAB
+        )
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(start = 18.dp, end = 18.dp, bottom = 48.dp)
-            ) {
-                if (state.healthState is HealthState.NoPermission) {
-                    HealthConnectGhostBlock(
-                        onClick = { healthLauncher.launch(viewModel.healthPermissions) }
-                    )
-                }
-                val q = state.pendingQuestion
-                when (q) {
-                    is PendingQuestion.IntentionCheck -> {
-                        QuestionCard(
-                            question = "«${q.eventTitle}» состоялась?",
-                            actions = listOf(
-                                QuestionAction("Да ✓") {
-                                    viewModel.confirmIntention(q.eventId, q.instanceStart)
-                                },
-                                QuestionAction("Не сегодня") {
-                                    viewModel.skipIntention(q.eventId, q.instanceStart)
-                                },
-                            ),
-                            quietAction = QuestionAction("позже") {
-                                viewModel.postponeIntention(q.eventId, q.instanceStart)
-                            },
-                        )
-                        Spacer(modifier = Modifier.height(14.dp))
-                    }
-
-                    is PendingQuestion.PendingExpenseCheck -> {
-                        QuestionCard(
-                            question = buildString {
-                                append(q.merchant ?: "Без описания")
-                                append(" · ")
-                                append(formatAmount(q.amount, q.currency))
-                                append(" — записать?")
-                            },
-                            actions = listOf(
-                                QuestionAction("Записать") {
-                                    viewModel.confirmPendingDraft(
-                                        q.draftId,
-                                        ExpenseConfirmation(
-                                            amount = q.amount,
-                                            merchant = q.merchant ?: "",
-                                            category = ExpenseCategory.OTHER, // TODO F-04: inferCategory(q.merchant)
-                                            occurredAt = Instant.fromEpochMilliseconds(q.occurredAt),
-                                            note = "",
-                                        )
-                                    )
-                                },
-                                QuestionAction("Не трата") {
-                                    viewModel.dismissPendingDraft(q.draftId)
-                                },
-                            ),
-                        )
-                        Spacer(modifier = Modifier.height(14.dp))
-                    }
-
-                    null -> Unit
-                }
-                TimelineSection(
-                    items = state.days.flatMap { it.items },
-                    onMarkIntention = viewModel::markEventAsIntention,
-                )
-            }
-            LiveGlassOverlay(
-                weather = state.days.firstOrNull()?.weatherIcon,
-                modifier = Modifier.matchParentSize()
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = contentPadding,
+        ) {
+            renderFeed(
+                days = state.days,
+                pendingQuestion = state.pendingQuestion,
+                healthState = state.healthState,
+                now = now,
+                onMarkIntention = viewModel::markEventAsIntention,
+                onConfirmIntention = viewModel::confirmIntention,
+                onSkipIntention = viewModel::skipIntention,
+                onPostponeIntention = viewModel::postponeIntention,
+                onConfirmDraft = viewModel::confirmPendingDraft,
+                onDismissDraft = viewModel::dismissPendingDraft,
+                onRequestHealthPermission = { healthLauncher.launch(viewModel.healthPermissions) },
             )
         }
+
+        LiveGlassOverlay(weather = todayWeather, modifier = Modifier.fillMaxSize())
+
+        // Верхний скрим — лента растворяется, под ним sticky-капитель.
+        EdgeScrimTop(modifier = Modifier.align(Alignment.TopCenter))
+
+        // Sticky-капитель: ПЯТНИЦА · 4 ИЮЛЯ. Overlay-вариант — видна только когда полная
+        // шапка собственного дня уехала за край. Так в мокапе двойной даты в покое нет.
+        StickyCaplineOverlay(
+            days = state.days,
+            listState = listState,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp),
+        )
+
+        EdgeScrimBottom(modifier = Modifier.align(Alignment.BottomCenter))
+
+        GlassFab(
+            onClick = viewModel::onExpensesClicked,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(end = 22.dp, bottom = 26.dp),
+        )
     }
 }
 
-@Composable
-private fun GlassWidgetCard(
-    title: String,
-    statusText: String,
-    statusColor: Color,
-    subtitle: String,
-    iconContent: @Composable () -> Unit,
-    rightContent: @Composable () -> Unit,
-    bgColor: Color = Color.White.copy(alpha = 0.26f),
-    statusBgColor: Color = statusColor.copy(alpha = 0.22f),
-    statusBorderColor: Color = statusColor.copy(alpha = 0.45f),
-    bottomContent: @Composable (() -> Unit)? = null
+@OptIn(ExperimentalTime::class)
+internal fun LazyListScope.renderFeed(
+    days: List<DaySection>,
+    pendingQuestion: PendingQuestion?,
+    healthState: HealthState,
+    now: Instant,
+    onMarkIntention: (String, Long, Int) -> Unit,
+    onConfirmIntention: (String, Long) -> Unit,
+    onSkipIntention: (String, Long) -> Unit,
+    onPostponeIntention: (String, Long) -> Unit,
+    onConfirmDraft: (String, ExpenseConfirmation) -> Unit,
+    onDismissDraft: (String) -> Unit,
+    onRequestHealthPermission: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
-            .background(bgColor)
-            .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(26.dp))
-            .padding(horizontal = 18.dp, vertical = 16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            iconContent()
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(9.dp)
-                ) {
-                    Text(
-                        text = title,
-                        fontSize = 20.sp,
-                        fontFamily = FontFamily.Serif,
-                        color = PureBlack
-                    )
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(statusBgColor)
-                            .border(1.dp, statusBorderColor, RoundedCornerShape(14.dp))
-                            .padding(horizontal = 9.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = statusText,
-                            fontSize = 9.sp,
-                            letterSpacing = 1.sp,
-                            color = statusColor,
-                            fontFamily = FontFamily.Monospace
-                        )
+    days.forEachIndexed { index, section ->
+        val isToday = section.kind == DayKind.TODAY
+        val sectionAlpha = if (isToday) 1f else 0.42f
+
+        if (index > 0) {
+            item(key = "gap-${section.date}") { Spacer(Modifier.height(16.dp)) }
+        }
+
+        item(key = "header-${section.date}") {
+            // TOMORROW: заголовок приглушён на уровне самого компонента DayHeader (dayHeaderMuted
+            // = 60%). Погода у TOMORROW не рисуется.
+            DayHeader(
+                date = section.date,
+                kind = section.kind,
+                weather = section.weatherIcon,
+                onWeatherClick = {}, // раскрытие веера — не в скоупе бандла
+            )
+        }
+
+        if (isToday && healthState is HealthState.NoPermission) {
+            item(key = "hc-ghost") {
+                Spacer(Modifier.height(16.dp))
+                HealthConnectGhostBlock(onClick = onRequestHealthPermission)
+            }
+        }
+
+        // Собираем позиции NowLine и QuestionCard только для TODAY.
+        val nowMillis = now.toEpochMilliseconds()
+        val lastPastIndex = if (isToday) {
+            section.items.indexOfLast { it.sortKey <= nowMillis }
+        } else -1
+
+        var prevKind: RowKind? = RowKind.HEADER
+        section.items.forEachIndexed { idx, item ->
+            val curKind = item.toRowKind()
+            val gap = gapBefore(prevKind, curKind)
+
+            item(key = item.stableId, contentType = curKind) {
+                Column(modifier = Modifier.alpha(sectionAlpha)) {
+                    if (gap > 0.dp) Spacer(Modifier.height(gap))
+                    RenderItem(item = item, now = now, onMarkIntention = onMarkIntention)
+                }
+            }
+            prevKind = curKind
+
+            // NowLine вставляется ПОСЛЕ последнего элемента с sortKey <= now.
+            if (isToday && idx == lastPastIndex) {
+                item(key = "now-line", contentType = RowKind.NOW) {
+                    val timeLabel = remember(now) { formatTimeLabel(now) }
+                    Column {
+                        Spacer(Modifier.height(14.dp))
+                        NowLine(timeLabel = timeLabel)
                     }
                 }
-                if (subtitle.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = subtitle,
-                        fontSize = 11.sp,
-                        color = PureBlack.copy(alpha = 0.7f),
-                        fontFamily = FontFamily.Monospace,
-                        lineHeight = 16.sp
-                    )
-                }
-            }
-            rightContent()
-        }
-        bottomContent?.invoke()
-    }
-}
+                prevKind = RowKind.NOW
 
-@Composable
-private fun TimelineSection(
-    items: List<TimelineItem>,
-    onMarkIntention: (eventId: String, instanceStart: Long, durationMin: Int) -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp)
-        ) {
-            // Вертикальная линия
-            Canvas(modifier = Modifier.matchParentSize()) {
-                drawLine(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            NeonYellow.copy(alpha = 0.45f),
-                            CoralRed.copy(alpha = 0.35f),
-                            ElectricBlue.copy(alpha = 0.55f),
-                            PureBlack.copy(alpha = 0.12f)
-                        )
-                    ),
-                    start = Offset(6.5.dp.toPx(), 20.dp.toPx()),
-                    end = Offset(6.5.dp.toPx(), size.height - 22.dp.toPx()),
-                    strokeWidth = 1.5.dp.toPx()
-                )
-            }
-
-            Column {
-                if (items.isEmpty()) {
-                    Text(
-                        text = "Лента пуста",
-                        modifier = Modifier.padding(start = 24.dp, top = 16.dp),
-                        color = PureBlack.copy(alpha = 0.5f)
-                    )
-                } else {
-                    items.forEach { item ->
-                        when (item) {
-                            is TimelineItem.Expense -> ExpenseRow(item)
-
-                            is TimelineItem.Event -> EventRow(
-                                item = item,
-                                isFuture = false, // временно; стадия D подключит rememberNow()
-                                onMarkIntention = {
-                                    onMarkIntention(
-                                        item.eventId,
-                                        item.instanceStart,
-                                        item.durationMin
-                                    )
-                                },
+                // Карточка-вопрос — сразу после NowLine (где внимание).
+                if (pendingQuestion != null) {
+                    item(key = "question", contentType = RowKind.QUESTION) {
+                        Column {
+                            Spacer(Modifier.height(14.dp))
+                            RenderQuestion(
+                                question = pendingQuestion,
+                                onConfirmIntention = onConfirmIntention,
+                                onSkipIntention = onSkipIntention,
+                                onPostponeIntention = onPostponeIntention,
+                                onConfirmDraft = onConfirmDraft,
+                                onDismissDraft = onDismissDraft,
                             )
-
-                            is TimelineItem.HealthDigit -> HealthDigitRow(item)
                         }
                     }
+                    prevKind = RowKind.QUESTION
+                }
+            }
+        }
+
+        // Если TODAY, лента пуста, но NowLine всё равно уместна «сейчас в тишине».
+        if (isToday && section.items.isEmpty()) {
+            item(key = "empty-today") {
+                Column {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "Пока тихо 🌿",
+                        style = SafeSpaceType.eventTitle,
+                        color = Color.White.copy(alpha = 0.42f),
+                    )
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
-fun HealthConnectGhostBlock(
+private fun RenderItem(
+    item: TimelineItem,
+    now: Instant,
+    onMarkIntention: (String, Long, Int) -> Unit,
+) {
+    when (item) {
+        is TimelineItem.Expense -> ExpenseRow(item = item)
+        is TimelineItem.HealthDigit -> HealthDigitRow(item = item)
+        is TimelineItem.Event -> EventRow(
+            item = item,
+            isFuture = item.instanceStart > now.toEpochMilliseconds(),
+            onMarkIntention = {
+                onMarkIntention(item.eventId, item.instanceStart, item.durationMin)
+            },
+        )
+    }
+}
+
+@Composable
+private fun RenderQuestion(
+    question: PendingQuestion,
+    onConfirmIntention: (String, Long) -> Unit,
+    onSkipIntention: (String, Long) -> Unit,
+    onPostponeIntention: (String, Long) -> Unit,
+    onConfirmDraft: (String, ExpenseConfirmation) -> Unit,
+    onDismissDraft: (String) -> Unit,
+) {
+    when (question) {
+        is PendingQuestion.IntentionCheck -> QuestionCard(
+            question = "«${question.eventTitle}» состоялась?",
+            actions = listOf(
+                QuestionAction("Да ✓") { onConfirmIntention(question.eventId, question.instanceStart) },
+                QuestionAction("Не сегодня") { onSkipIntention(question.eventId, question.instanceStart) },
+            ),
+            quietAction = QuestionAction("позже") {
+                onPostponeIntention(question.eventId, question.instanceStart)
+            },
+        )
+
+        is PendingQuestion.PendingExpenseCheck -> QuestionCard(
+            question = buildString {
+                append(question.merchant ?: "Без описания")
+                append(" · ")
+                append(formatAmount(question.amount, question.currency))
+                append(" — записать?")
+            },
+            actions = listOf(
+                QuestionAction("Записать") {
+                    onConfirmDraft(
+                        question.draftId,
+                        ExpenseConfirmation(
+                            amount = question.amount,
+                            merchant = question.merchant ?: "",
+                            category = ExpenseCategory.OTHER,
+                            occurredAt = Instant.fromEpochMilliseconds(question.occurredAt),
+                            note = "",
+                        ),
+                    )
+                },
+                QuestionAction("Не трата") { onDismissDraft(question.draftId) },
+            ),
+        )
+    }
+}
+
+@Composable
+private fun StickyCaplineOverlay(
+    days: List<DaySection>,
+    listState: LazyListState,
+    modifier: Modifier = Modifier,
+) {
+    val visibleCapline by remember(days) {
+        derivedStateOf { visibleCaplineFor(days, listState) }
+    }
+    if (visibleCapline != null) {
+        StickyCapline(text = visibleCapline!!, modifier = modifier)
+    }
+}
+
+/**
+ * Какая капитель липнет под статусбаром в данный момент:
+ *  - идём с конца списка видимых элементов (которых уже «коснулся» верх экрана);
+ *  - находим первую секцию, чья `header-$date` ещё НЕ видна (значит шапка уехала);
+ *  - возвращаем текст капители для этой секции. null — все шапки на экране, капитель не нужна.
+ */
+private fun visibleCaplineFor(days: List<DaySection>, listState: LazyListState): String? {
+    if (days.isEmpty()) return null
+    val visibleKeys: Set<Any> = listState.layoutInfo.visibleItemsInfo
+        .mapNotNull { it.key }
+        .toSet()
+    // Берём последнюю секцию, чья шапка уже за верхним краем.
+    val uncoveredSection = days.lastOrNull { section ->
+        val headerKey = "header-${section.date}"
+        headerKey !in visibleKeys
+    } ?: return null
+    return formatCapline(uncoveredSection.date)
+}
+
+private enum class RowKind { EXPENSE, EVENT, HEALTH, NOW, QUESTION, HEADER }
+
+private fun TimelineItem.toRowKind(): RowKind = when (this) {
+    is TimelineItem.Expense -> RowKind.EXPENSE
+    is TimelineItem.Event -> RowKind.EVENT
+    is TimelineItem.HealthDigit -> RowKind.HEALTH
+}
+
+/**
+ * Отступ перед строкой — чистая функция от соседей:
+ *  — вокруг NowLine/QuestionCard всегда 14dp (вставка «вне жанров»);
+ *  — соседи одного жанра — 6dp (слипаются в «главу»);
+ *  — разные жанры — 16dp;
+ *  — после HEADER — отдельно, 16dp.
+ */
+private fun gapBefore(prev: RowKind?, cur: RowKind): Dp = when {
+    prev == null -> 0.dp
+    prev == RowKind.HEADER -> 16.dp
+    prev == RowKind.NOW || cur == RowKind.NOW ||
+        prev == RowKind.QUESTION || cur == RowKind.QUESTION -> 14.dp
+    prev == cur -> 6.dp
+    else -> 16.dp
+}
+
+@OptIn(ExperimentalTime::class)
+private fun formatTimeLabel(now: Instant): String {
+    val local = java.time.Instant.ofEpochMilli(now.toEpochMilliseconds())
+        .atZone(java.time.ZoneId.systemDefault())
+        .toLocalTime()
+    return "%02d:%02d".format(local.hour, local.minute)
+}
+
+@Composable
+private fun HealthConnectGhostBlock(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -358,6 +446,7 @@ fun HealthConnectGhostBlock(
                     cornerRadius = CornerRadius(12.dp.toPx()),
                 )
             }
+            .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         contentAlignment = Alignment.CenterStart,
@@ -365,22 +454,21 @@ fun HealthConnectGhostBlock(
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = "Подключить Health Connect",
-                color = Color.White,
+                color = SafeSpaceTokens.Palette.onSurfacePrimary,
                 fontSize = 14.sp,
-                fontWeight = FontWeight.Normal,
             )
             Text(
                 text = "шаги · сон · тренировки",
-                color = Color.Gray,
+                color = SafeSpaceTokens.Palette.onSurfaceCaption,
                 fontSize = 11.sp,
             )
         }
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, backgroundColor = 0xFF141414)
 @Composable
-fun HubScreenLiquidGlassPreview() {
+private fun HubScreenPreview() {
     PreviewTheme {
         HubScreen()
     }
