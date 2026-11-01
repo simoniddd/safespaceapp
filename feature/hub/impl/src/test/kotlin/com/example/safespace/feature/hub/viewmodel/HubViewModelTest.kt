@@ -19,6 +19,7 @@ import com.example.safespace.feature.hub.fake.FakeNavigator
 import com.example.safespace.feature.hub.fake.FakePendingExpenseDraftRepository
 import com.example.safespace.feature.hub.fake.FakeWeatherRepository
 import com.example.safespace.feature.hub.presentation.model.TimelineItem
+import com.example.safespace.feature.hub.presentation.model.TimelineNode
 import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.Dispatchers
@@ -77,6 +78,7 @@ class HubViewModelTest {
         healthRepository = FakeHealthRepository(),
         pendingExpenseDraftRepository = FakePendingExpenseDraftRepository(),
         autoConfirmIntentionsUseCase = AutoConfirmIntentionsUseCase(),
+        clock = Clock.System,
         navigator = FakeNavigator(),
     )
 
@@ -90,7 +92,7 @@ class HubViewModelTest {
             assertEquals(false, state.isLoading)
             // multi-day: today + tomorrow всегда две секции, независимо от наличия данных
             assertEquals(2, state.days.size)
-            assertEquals(emptyList<TimelineItem>(), state.days.flatMap { it.items })
+            assertEquals(emptyList<TimelineNode>(), state.days.flatMap { it.items })
         }
     }
 
@@ -115,7 +117,10 @@ class HubViewModelTest {
             val tomorrowSection = updated.days.first { it.date != today }
 
             assertEquals(1, todaySection.items.size)
-            assertEquals(0, tomorrowSection.items.filterIsInstance<TimelineItem.Expense>().size)
+            val tomorrowExpenses = tomorrowSection.items
+                .filterIsInstance<TimelineNode.Leaf>()
+                .count { it.item is TimelineItem.Expense }
+            assertEquals(0, tomorrowExpenses)
             cancelAndIgnoreRemainingEvents()
         }
     }

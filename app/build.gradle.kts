@@ -19,12 +19,27 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("boolean", "DEMO", "false")
+        }
         release {
             isMinifyEnabled = false
+            buildConfigField("boolean", "DEMO", "false")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        // «Витринная» сборка — ставится рядом с debug (разный applicationId), читает фейковые
+        // данные из :app/src/demo. Для библиотечных модулей matchingFallbacks = debug — им своя
+        // demo-конфигурация не нужна.
+        create("demo") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".demo"
+            versionNameSuffix = "-demo"
+            matchingFallbacks += listOf("debug")
+            buildConfigField("boolean", "DEMO", "true")
+            isDebuggable = true
         }
     }
     compileOptions {
@@ -33,6 +48,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -69,6 +85,9 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
     implementation(libs.koin.androidx.workmanager)
+
+    // datetime — для демо-источников в src/demo
+    implementation(libs.kotlinx.datetime)
 
     // Навигация и Сериализация
     implementation(libs.navigation.compose)

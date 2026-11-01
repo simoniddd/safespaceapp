@@ -18,16 +18,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.safespace.core.ui.components.SourceStamp
 import com.example.safespace.core.ui.components.timeline.TimelineRow
+import com.example.safespace.core.ui.components.toSourceLabel
 import com.example.safespace.core.ui.preview.PreviewTheme
 import com.example.safespace.core.ui.theme.SafeSpaceTokens
 import com.example.safespace.core.ui.theme.SafeSpaceType
 import com.example.safespace.feature.hub.presentation.model.TimelineItem
 
+/**
+ * Health-строка: стекло 4.5%, вместо цветной точки — круглая «печать».
+ *
+ * Для тренировок с известным `source` слева рисуется [SourceStamp] (26dp
+ * текстовая капитель — STRAVA / GARMIN / HC / ...). Для sleep/steps источник
+ * не хранится (это агрегаты Health Connect), слева кружок с эмодзи — та же
+ * геометрия 26dp, визуально согласован с SourceStamp.
+ */
 @Composable
 fun HealthDigitRow(
     item: TimelineItem.HealthDigit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     TimelineRow(
         modifier = modifier,
@@ -43,45 +53,61 @@ fun HealthDigitRow(
                 horizontalArrangement = Arrangement.spacedBy(11.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(26.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = .05f))
-                        .border(1.dp, Color.White.copy(alpha = .09f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(item.icon, fontSize = 12.sp)
+                if (item.source != null) {
+                    SourceStamp(label = item.source.toSourceLabel())
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.05f))
+                            .border(1.dp, Color.White.copy(alpha = 0.09f), CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(text = item.icon, fontSize = 12.sp)
+                    }
                 }
 
                 Text(
                     text = item.title,
                     style = SafeSpaceType.expenseTitle,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
-
-                Text(
-                    text = item.digit,
-                    style = SafeSpaceType.healthDigit
-                )
+                Text(text = item.digit, style = SafeSpaceType.healthDigit)
             }
-        }
+        },
     )
 }
 
-
 @Preview(showBackground = true, backgroundColor = 0xFF141414)
 @Composable
-private fun HealthDigitRowPreview() {
+private fun HealthDigitRowSleepPreview() {
     PreviewTheme {
         HealthDigitRow(
             item = TimelineItem.HealthDigit(
                 sortKey = 0L,
+                stableId = "sleep",
                 icon = "😴",
                 title = "Сон",
-                digit = "7ч 24м",
-                stableId = ""
-            )
+                digit = "7ч 20м",
+            ),
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF141414)
+@Composable
+private fun HealthDigitRowExercisePreview() {
+    PreviewTheme {
+        HealthDigitRow(
+            item = TimelineItem.HealthDigit(
+                sortKey = 0L,
+                stableId = "ex",
+                icon = "🏃",
+                title = "Бег 5.2 км",
+                digit = "32 мин",
+                source = "com.strava",
+            ),
         )
     }
 }

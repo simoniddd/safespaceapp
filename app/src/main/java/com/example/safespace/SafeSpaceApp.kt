@@ -7,6 +7,7 @@ import com.example.safespace.core.presentation.di.presentationModule
 import com.example.safespace.feature.calendar.di.calendarModule
 import com.example.safespace.feature.expenses.di.expensesModule
 import com.example.safespace.feature.hub.di.hubModule
+import com.example.safespace.koin.buildTypeKoinModules
 
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.koin.workManagerFactory
@@ -17,14 +18,18 @@ class SafeSpaceApp : Application() {
         startKoin {
             androidContext(this@SafeSpaceApp)
             workManagerFactory()
-            modules(
+            val coreModules = listOf(
                 presentationModule,
                 appModule,
                 dataModule,
                 expensesModule,
                 hubModule,
-                calendarModule
+                calendarModule,
             )
+            // buildTypeKoinModules() пустой для debug/release и возвращает demoDataModule
+            // для sourceSet-а demo (см. :app/src/<buildType>/.../koin/BuildTypeKoinModules.kt).
+            // Поздние модули Koin'а перекрывают ранние — реальные биндинги подменяются на демо.
+            modules(coreModules + buildTypeKoinModules())
         }
     }
 }
