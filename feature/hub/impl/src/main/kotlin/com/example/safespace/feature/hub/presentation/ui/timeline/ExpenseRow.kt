@@ -1,7 +1,6 @@
 package com.example.safespace.feature.hub.presentation.ui.timeline
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -48,9 +47,8 @@ fun ExpenseRow(
             Row(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(SafeSpaceTokens.Glass.body)
-                    .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SafeSpaceTokens.Glass.expense)
                     .padding(horizontal = 13.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,

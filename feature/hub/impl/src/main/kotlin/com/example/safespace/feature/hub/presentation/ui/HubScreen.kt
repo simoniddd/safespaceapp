@@ -318,6 +318,7 @@ private fun TimelineSection(
 
                             is TimelineItem.Event -> EventRow(
                                 item = item,
+                                isFuture = false, // временно; стадия D подключит rememberNow()
                                 onMarkIntention = {
                                     onMarkIntention(
                                         item.eventId,
