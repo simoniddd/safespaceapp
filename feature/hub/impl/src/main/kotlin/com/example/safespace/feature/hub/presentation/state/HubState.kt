@@ -36,8 +36,11 @@ data class EventAggregate(
     val recurringAverage: Double? = null,
 )
 
+enum class DayKind { TODAY, TOMORROW }
+
 data class DaySection(
     val date: LocalDate,
+    val kind: DayKind,
     val label: String,
     val weatherIcon: WeatherIcon?,
     val items: List<TimelineItem>,

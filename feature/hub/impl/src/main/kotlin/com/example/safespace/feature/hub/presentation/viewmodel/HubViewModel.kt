@@ -25,6 +25,7 @@ import com.example.safespace.feature.expenses.domain.repository.ExpensesReposito
 import com.example.safespace.feature.expenses.navigation.ExpensesEntryPoint
 import com.example.safespace.feature.hub.presentation.mapper.TimelineMapper
 import com.example.safespace.feature.hub.presentation.mapper.buildEventAggregates
+import com.example.safespace.feature.hub.presentation.state.DayKind
 import com.example.safespace.feature.hub.presentation.state.DaySection
 import com.example.safespace.feature.hub.presentation.state.HubState
 import com.example.safespace.feature.hub.presentation.state.PendingQuestion
@@ -35,19 +36,22 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.flow as coldFlow
+import kotlinx.coroutines.delay
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.plus
-import kotlinx.datetime.todayIn
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
+@OptIn(ExperimentalTime::class)
 class HubViewModel(
     private val expensesRepository: ExpensesRepository,
     private val expensesEntryPoint: ExpensesEntryPoint,
@@ -60,6 +64,7 @@ class HubViewModel(
     private val healthRepository: HealthRepository,
     private val pendingExpenseDraftRepository: PendingExpenseDraftRepository,
     private val autoConfirmIntentionsUseCase: AutoConfirmIntentionsUseCase,
+    private val clock: Clock,
     navigator: Navigator,
 ) : StatefulViewModel<HubState>(HubState(), navigator) {
 
@@ -77,12 +82,28 @@ class HubViewModel(
         val healthState: HealthState,
     )
 
-    // Multi-day: [today, tomorrow]. Один suspend-фетч на оба дня, чтобы combine ниже не разросся.
-    @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
-    private val daysDataFlow: Flow<List<DayData>> = _refreshTrigger.flatMapLatest {
-        flow {
+    // «Какой сегодня день» — живая величина. Пересчитывается на старт, ON_RESUME и на полуночи,
+    // иначе после полуночи экран показывает вчера как «Сегодня». Полуночный delay — внутри холодного
+    // flow, под `distinctUntilChanged` → лишних перерисовок нет.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val currentDate: Flow<LocalDate> = _refreshTrigger.flatMapLatest {
+        coldFlow {
             val tz = TimeZone.currentSystemDefault()
-            val today = Clock.System.todayIn(tz)
+            while (true) {
+                val today = clock.now().toLocalDateTime(tz).date
+                emit(today)
+                val nextMidnight = today.plus(1, DateTimeUnit.DAY)
+                    .atStartOfDayIn(tz)
+                val delayMs = (nextMidnight - clock.now()).inWholeMilliseconds.coerceAtLeast(1_000L)
+                delay(delayMs)
+            }
+        }
+    }.distinctUntilChanged()
+
+    // Multi-day: [today, tomorrow]. Один suspend-фетч на оба дня, чтобы combine ниже не разросся.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val daysDataFlow: Flow<List<DayData>> = currentDate.flatMapLatest { today ->
+        coldFlow {
             val tomorrow = today.plus(1, DateTimeUnit.DAY)
             emit(listOf(today, tomorrow).map { date ->
                 DayData(
@@ -115,7 +136,6 @@ class HubViewModel(
         intentionRepository.observeDoneCountByEventId(),
     ) { intentions, doneCounts -> intentions to doneCounts }
 
-    @OptIn(ExperimentalTime::class)
     val uiState: StateFlow<HubState> = combine(
         expensesBundle,
         daysDataFlow,
@@ -125,9 +145,10 @@ class HubViewModel(
         val (allExpenses, weatherIcon, recurringAverages, pendingDrafts) = bundle
         val (intentions, doneCounts) = intentionsPair
         val tz = TimeZone.currentSystemDefault()
-        val today = Clock.System.todayIn(tz)
+        val today = clock.now().toLocalDateTime(tz).date
 
         val sections = daysData.map { dayData ->
+            val isToday = dayData.date == today
             val filteredEvents = if (hiddenIds.isEmpty()) dayData.events
             else dayData.events.filter { it.calendarId !in hiddenIds }
             val eventsWithState = filteredEvents.map { it.copy(intentionState = intentions[it.id]) }
@@ -144,9 +165,10 @@ class HubViewModel(
 
             DaySection(
                 date = dayData.date,
-                label = if (dayData.date == today) "Сегодня" else "Завтра",
+                kind = if (isToday) DayKind.TODAY else DayKind.TOMORROW,
+                label = if (isToday) "Сегодня" else "Завтра",
                 // Погода только для today — «нельзя выбрать заранее» (STATUS 24.08)
-                weatherIcon = if (dayData.date == today) weatherIcon else null,
+                weatherIcon = if (isToday) weatherIcon else null,
                 items = timelineMapper(
                     date = dayData.date,
                     expenses = expensesForDay,
@@ -192,7 +214,6 @@ class HubViewModel(
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     private fun resolvePendingQuestion(
         drafts: List<PendingExpenseDraft>, eventsWithState: List<CalendarEventItem>
     ): PendingQuestion? {
@@ -215,9 +236,8 @@ class HubViewModel(
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     private suspend fun runAutoConfirm() {
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val today = clock.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
         val available = (healthRepository.getState(today) as? HealthState.Available)?.data ?: return
         if (available.exercises.isEmpty()) return
 
@@ -278,12 +298,10 @@ class HubViewModel(
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     fun saveWeather(icon: WeatherIcon) {
         viewModelScope.launch {
-            weatherRepository.saveWeather(
-                Clock.System.todayIn(TimeZone.currentSystemDefault()), icon
-            )
+            val today = clock.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+            weatherRepository.saveWeather(today, icon)
         }
     }
 

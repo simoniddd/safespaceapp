@@ -6,7 +6,9 @@ import com.example.safespace.feature.hub.presentation.navigation.HubEntryPointIm
 import com.example.safespace.feature.hub.presentation.viewmodel.HubViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
+import kotlin.time.ExperimentalTime
 
+@OptIn(ExperimentalTime::class)
 val hubModule = module {
     single<HubEntryPoint> { HubEntryPointImpl() }
     single { AutoConfirmIntentionsUseCase() }
@@ -23,6 +25,7 @@ val hubModule = module {
             healthRepository = get(),
             pendingExpenseDraftRepository = get(),
             autoConfirmIntentionsUseCase = get(),
+            clock = get(),
             navigator = get(),
         )
     }

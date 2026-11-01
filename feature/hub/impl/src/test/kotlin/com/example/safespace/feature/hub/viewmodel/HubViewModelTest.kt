@@ -77,6 +77,7 @@ class HubViewModelTest {
         healthRepository = FakeHealthRepository(),
         pendingExpenseDraftRepository = FakePendingExpenseDraftRepository(),
         autoConfirmIntentionsUseCase = AutoConfirmIntentionsUseCase(),
+        clock = Clock.System,
         navigator = FakeNavigator(),
     )
 
