@@ -1,143 +1,92 @@
 # SafeSpace
 
-An Android journaling app that assembles your day automatically — expenses, calendar events, sleep, steps, workouts, and a daily mood — into a single readable timeline. You don't *track* your day; you *read* it in the evening.
+A diary that writes itself: spending, calendar, and health in one timeline. **On-device only.**
 
-## Table of Contents
+> **Portfolio project.** Real data sources (bank notifications, Health Connect, system calendar) are implemented in the `debug` build; the `demo` build ships with sample data so you can see the app without granting any permissions.
 
-- [Overview](#overview)
-- [Design Principles](#design-principles)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Testing](#testing)
-- [Roadmap](#roadmap)
-- [Privacy](#privacy)
-- [License](#license)
+## Screenshots
 
-## Overview
+| Today — rich day | Scroll to tomorrow | Nested expense under event |
+|---|---|---|
+| `docs/screenshots/hub-today.png` | `docs/screenshots/hub-scroll.gif` | `docs/screenshots/hub-nested.png` |
 
-SafeSpace pulls context from passive sources — the system calendar, Health Connect, and parsed bank push notifications — and composes them into a chronological, heterogeneous feed. Manual input is minimized by design; when it exists, it takes seconds.
+_Captured from the `demo` build at the frozen moment of 15:40._
 
-Status: active development. Core data layers, timeline, calendar/Health Connect integrations, and daily-mood are functional. Bank-notification capture and evening-recap features are in progress.
+## Try it
 
-## Design Principles
+```bash
+# fastest path: no permissions, no accounts, no network
+./gradlew :app:installDemo
+```
 
-Three product rules that shape both the UX and the data model:
+Or grab the signed `demo` APK from the [Releases](../../releases) page and sideload it.
 
-1. **Passive over manual.** Data should arrive on its own — from the system calendar, Health Connect, and parsed bank notifications — rather than being typed in.
-2. **No guilt.** No streaks, no red overspend warnings, no "you didn't fill this in." An empty day is simply a quiet day.
-3. **Context, not control.** The app surfaces connections ("evening out ≈ $80 and 4 hours") but never issues instructions.
-
-These principles are reflected in the code: nullable-by-design fields distinguish "not measured" from "measured zero"; sealed state hierarchies make invalid combinations unrepresentable; answer buttons are visually equal-weight so no choice is framed as "correct."
-
-## Features
-
-- Reactive timeline that merges expenses, calendar events, and health data via `combine()` into a single `StateFlow<HubState>`.
-- System calendar read via `CalendarContract` (`Instances` + `Events`), with runtime permission flow and graceful degradation.
-- Health Connect integration for steps, sleep, and exercise sessions.
-- Daily mood with a five-emoji fan and per-day Canvas overlays (rain, sun glint) rendered via `withFrameNanos` with a reused particle pool.
-- Expense entry (Room + Flow, hand-written migrations).
-- Interval-based matching of expenses to calendar events (windowed overlap with configurable buffer).
-- Passive bank-expense capture through `NotificationListenerService` and per-bank parser plugins that turn push notifications into draft transactions confirmed with one tap.
-
-## Tech Stack
-
-| Area | Choice |
-|---|---|
-| Language | Kotlin 2.2 |
-| UI | Jetpack Compose (Material 3) |
-| Async | Coroutines, Flow (`combine`, `flatMapLatest`, `stateIn`) |
-| Persistence | Room 2.7 (hand-written migrations, `Flow` DAOs), DataStore |
-| DI | Koin 3.5 |
-| Health data | Health Connect 1.1 |
-| Calendar | `CalendarContract` via `ContentResolver` |
-| Background work | WorkManager |
-| Navigation | Navigation Compose (type-safe, `@Serializable` routes) |
-| Date/time | `kotlinx-datetime` |
-| Testing | JUnit, `kotlinx-coroutines-test`, Turbine, Room `MigrationTestHelper` |
-| Build | AGP 9.2, Gradle version catalog, KSP |
+- **`demo` build** — fakes behind the same domain interfaces, FAB adds a real expense to the in-memory feed, "Yes" on the Netflix question card turns a draft into a timeline row.
+- **`debug` build** — real `CalendarContract`, Health Connect, and `NotificationListenerService`. Needs a physical device for notifications and Health Connect; emulators don't deliver either.
 
 ## Architecture
 
-Multi-module with dependency direction `feature → domain ← data`. The domain layer is pure Kotlin, giving KMP-readiness and android-free unit tests for business logic.
+```mermaid
+flowchart TD
+    app[":app<br/>DI wiring, nav graph"]
+    hub_impl[":feature:hub:impl"]
+    hub_api[":feature:hub:api"]
+    expenses_impl[":feature:expenses:impl"]
+    expenses_api[":feature:expenses:api"]
+    calendar_impl[":feature:calendar:impl"]
+    calendar_api[":feature:calendar:api"]
+    domain[":core:domain<br/>pure Kotlin"]
+    data[":core:data<br/>Room, HC, CalendarContract"]
+    ui[":core:ui<br/>tokens + shared composables"]
 
-**Key decisions:**
-
-- **`:core:domain` is pure Kotlin** — zero android imports, enforced by module boundaries at compile time.
-- **Single Source of Truth.** The UI only reads from Room via `Flow`. External sources (Health Connect, calendar) update the local store; the UI reacts through the reactive stream and never reads the network/provider directly.
-- **Feature api / impl split.** Each feature exposes a small `:api` module (interfaces, navigation contracts) that other features and `:app` depend on, and a private `:impl` module that only `:app` wires in at runtime. This prevents circular feature dependencies and keeps compile-time boundaries between features.
-- **Sealed state modeling.** External-source availability is modeled to make invalid states unrepresentable, e.g. `HealthState = NotInstalled | NoPermission(toRequest) | Available(data)`, where data lives *only* inside `Available`.
-- **Idempotent background work.** `WorkManager` tasks check persisted status before side effects, so retries and reboots never double-fire.
-- **Money as minor units (`Long`).** Currency is never `Double`.
-- **Hand-written Room migrations** with `MigrationTestHelper` coverage. `fallbackToDestructiveMigration` is not used — user data is never discarded on schema change.
-
-## Project Structure
-
-```
-:app                        // application entry point, DI wiring, navigation graph
-:core:di                    // shared DI configuration
-:core:domain                // pure Kotlin — entities, use cases, repository interfaces (zero android)
-:core:data                  // Room, Health Connect, ContentResolver, DataStore
-:core:presentation          // shared MVI / state primitives
-:core:ui                    // Compose design tokens & shared components
-:feature:expenses:api       // public contracts (nav routes, interfaces)
-:feature:expenses:impl      // implementation (screens, view models, DI module)
-:feature:hub:api
-:feature:hub:impl
-:feature:calendar:api
-:feature:calendar:impl
+    app --> hub_impl & expenses_impl & calendar_impl
+    hub_impl --> hub_api --> domain
+    expenses_impl --> expenses_api --> domain
+    calendar_impl --> calendar_api --> domain
+    hub_impl --> ui
+    hub_impl --> expenses_api
+    hub_impl --> calendar_api
+    data --> domain
+    app --> data
 ```
 
-## Getting Started
+Direction of dependencies: `feature → domain ← data`. The hub reads other features through their `:api` contracts, never their `:impl`. `:core:domain` is pure Kotlin — zero Android imports, so business logic is KMP-ready and testable without a device.
 
-### Prerequisites
+## Decisions worth discussing
 
-- JDK 17+
-- Android Studio (recent stable) with AGP 9.2 support
-- A physical device for testing Health Connect and bank-notification capture (emulators do not deliver these)
+Taken straight from the code, not from a wish list.
 
-### Build
+1. **"Now" is a render property, not data.** `TimelineMapper` has no clock; `rememberNow()` ticks once per minute (aligned to the minute boundary) and the UI computes `isFuture = instanceStart > now` locally. Keeps the mapper pure and testable; makes the demo clock trivially overridable.
+2. **Injected `Clock` → `DemoClock`.** `Clock` is a Koin `single` (`Clock.System` in `debug`/`release`, `DemoClock` in `demo` with a 15:40 anchor plus real elapsed time). The ViewModel takes a `Clock`; Compose reads it from `LocalAppClock`. No part of the feature code knows which build it's in.
+3. **Demo mode via Koin override, not `if (DEMO)` branches.** `app/src/debug|release|demo/.../koin/BuildTypeKoinModules.kt` is a per-sourceSet file with the same signature; `demo` returns `listOf(demoDataModule)`, which overrides the data repositories. Features never see a `DEMO` flag.
+4. **`HealthState` is sealed, not an enum.** `HealthState = NotInstalled | NoPermission(toRequest) | Available(data)` — only one state carries data, so "no permission but with a reading" is unrepresentable.
+5. **Timeline is a `sealed interface TimelineNode`.** `Leaf(item)` and `EventWithExpenses(event, nested)` — the mapper decides nesting (linked `eventId` wins; otherwise windowed overlap; all-day events are excluded; inner-most event wins for overlaps). No aggregates, no "usually ~$80" — product rule, not a limitation.
+6. **Chronology is sacred.** The feed is sorted by `sortKey` end-to-end. Spacing is a pure function of neighbors (`gapBefore(prev, cur)`): 6dp inside a genre, 16dp across genres, 14dp around NowLine and QuestionCards. Genre never beats time.
+7. **Product laws encoded in the UI.** No streaks, no red numbers, no counters of missed items. A lonely number without a pair is treated as a judgement — so the day header shows no running expense total; event rows carry their own duration instead of a global "spent so far."
+8. **Money is `Long` minor units.** `Double` is not allowed to touch currency anywhere in the data layer.
+9. **Idempotent background work.** `WorkManager` tasks check persisted status before firing — reboots and retries can't double-confirm.
+10. **Hand-written Room migrations.** `MigrationTestHelper` covers each migration; `fallbackToDestructiveMigration` is off. User data never gets dropped on a schema bump.
+
+## Tech stack
+
+Kotlin 2.2 · Jetpack Compose (Material 3) · Coroutines & Flow · Room 2.7 · Koin 3.5 · Health Connect 1.1 · `CalendarContract` · WorkManager · Navigation Compose (type-safe `@Serializable`) · `kotlinx-datetime` · JUnit + Turbine · AGP 9.2 + KSP.
+
+## Build
 
 ```bash
-./gradlew assembleDebug
+./gradlew assembleDebug        # real data sources
+./gradlew assembleDemo         # fake data, no permissions required
+./gradlew test                 # JVM unit tests
+./gradlew connectedDebugAndroidTest   # Room migration + instrumented tests
 ```
-
-### Install on a connected device
-
-```bash
-./gradlew installDebug
-```
-
-## Testing
-
-```bash
-./gradlew test                        # all JVM unit tests
-./gradlew :core:domain:test           # domain-only tests (fastest feedback loop)
-./gradlew connectedDebugAndroidTest   # instrumented tests, including Room migrations
-```
-
-Business logic in `:core:domain` is covered by JUnit. Room migrations are covered by instrumented tests using `MigrationTestHelper` against exported schema JSONs.
-
-## Roadmap
-
-- [x] Multi-module architecture with api/impl feature split
-- [x] Expense entry (Room + Flow)
-- [x] System calendar integration (read-only, permission flow)
-- [x] Heterogeneous timeline (expenses, events, health)
-- [x] Health Connect (steps, sleep, workouts)
-- [x] Daily mood with live-glass Canvas overlays
-- [x] Expense ↔ event matching (interval overlap)
-- [ ] Passive bank-notification expense capture
-- [ ] "Cost of an evening" aggregate for linked expenses
-- [ ] Evening recap (story-format day summary)
-- [ ] Subscription detection
-- [ ] Weekly correlations (on-device)
 
 ## Privacy
 
-All data stays on-device. There is no backend, no account, and no telemetry. The local Room database is the only store.
+Everything stays on-device. No backend, no account, no telemetry. The local Room database is the only store, and the `demo` build keeps its data in memory for the lifetime of the process.
+
+## Status
+
+Portfolio project. Real integrations (bank notifications, Health Connect, calendar) ship in the `debug` build; the `demo` build is the fastest way to see what the app feels like.
 
 ## License
 
